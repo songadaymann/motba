@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { HalftoneOverlay } from "@/components/HalftoneOverlay";
 import { CATEGORY_COLORS, type ArtCategory } from "@/lib/constants";
@@ -233,7 +233,7 @@ function HeroCarousel({
 
   return (
     <section className="relative z-[2] border-b-[3px] border-[var(--riso-ink)]">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-6xl px-8 py-6 sm:px-6 sm:py-8">
         <div className="border-[3px] border-[var(--riso-ink)]">
           <div className="relative">
             <Link
@@ -257,26 +257,32 @@ function HeroCarousel({
             </Link>
 
             {hasMultipleHeroes && (
-              <div className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center justify-between px-2 sm:px-3">
+              <>
                 <button
                   type="button"
                   onClick={() => moveHero(-1)}
                   aria-label="Previous project"
                   title="Previous project"
-                  className="pointer-events-auto flex size-9 items-center justify-center border-[2px] border-[var(--riso-ink)]/45 bg-[var(--riso-sage)]/75 text-[var(--riso-ink)] opacity-65 shadow-sm backdrop-blur-sm transition hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--riso-ink)] sm:size-10"
+                  className="absolute -left-5 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center text-[var(--riso-ink)] opacity-65 transition hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-[2px] focus-visible:outline-offset-4 focus-visible:outline-[var(--riso-ink)] sm:-left-10 sm:w-16 lg:-left-16 lg:w-20"
                 >
-                  <ChevronLeft className="size-5" strokeWidth={2.5} />
+                  <ArrowLeft
+                    className="h-4 w-14 sm:w-16 lg:w-20"
+                    strokeWidth={1.5}
+                  />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveHero(1)}
                   aria-label="Next project"
                   title="Next project"
-                  className="pointer-events-auto flex size-9 items-center justify-center border-[2px] border-[var(--riso-ink)]/45 bg-[var(--riso-sage)]/75 text-[var(--riso-ink)] opacity-65 shadow-sm backdrop-blur-sm transition hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[var(--riso-ink)] sm:size-10"
+                  className="absolute -right-5 top-1/2 flex h-14 w-14 -translate-y-1/2 items-center justify-center text-[var(--riso-ink)] opacity-65 transition hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-[2px] focus-visible:outline-offset-4 focus-visible:outline-[var(--riso-ink)] sm:-right-10 sm:w-16 lg:-right-16 lg:w-20"
                 >
-                  <ChevronRight className="size-5" strokeWidth={2.5} />
+                  <ArrowRight
+                    className="h-4 w-14 sm:w-16 lg:w-20"
+                    strokeWidth={1.5}
+                  />
                 </button>
-              </div>
+              </>
             )}
           </div>
 

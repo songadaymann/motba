@@ -23,12 +23,17 @@ export function Header() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-[2px] text-[20px] font-black text-[var(--riso-ink)]"
+          className="flex min-w-0 items-center gap-3 text-[var(--riso-ink)]"
           style={{ fontFamily: "'Arial Black', 'Impact', sans-serif" }}
         >
-          <span>M</span>
-          <ClockO size={22} />
-          <span>TBA</span>
+          <span className="flex shrink-0 items-center gap-[2px] text-[20px] font-black">
+            <span>M</span>
+            <ClockO size={22} />
+            <span>TBA</span>
+          </span>
+          <span className="hidden truncate text-[10px] font-black lowercase tracking-[0.08em] text-[var(--riso-ink)]/65 min-[360px]:inline">
+            museum of time based art
+          </span>
         </Link>
 
         {/* Desktop nav */}
