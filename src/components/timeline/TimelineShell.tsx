@@ -1,17 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { CATEGORIES, CATEGORY_COLORS, type ArtCategory } from "@/lib/constants";
+import { cloudinaryUrl } from "@/lib/cloudinary/config";
 import type { TimelineEntry } from "@/types/database";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 const PX_PER_DAY = 2;
 const SIDE_PADDING = 96;
 const EVENT_CARD_WIDTH = 290;
-const EVENT_CARD_HEIGHT = 176;
+const EVENT_CARD_HEIGHT = 190;
 const EVENT_CARD_GAP = 34;
-const AXIS_Y = 430;
+const AXIS_Y = 480;
 const MONTH_TICK_HEIGHT = 14;
 const YEAR_TICK_HEIGHT = 40;
 
@@ -278,6 +280,9 @@ function TimelineEventCard({ event }: { event: TimelineEvent }) {
   const tickTop =
     event.side === "top" ? cardTop + EVENT_CARD_HEIGHT : AXIS_Y;
   const dateLabel = getDateLabel(event, event.startDate);
+  const artistPhotoUrl = event.artist_photo_cloudinary_id
+    ? cloudinaryUrl(event.artist_photo_cloudinary_id, "artist-photo")
+    : null;
 
   return (
     <div
@@ -307,15 +312,28 @@ function TimelineEventCard({ event }: { event: TimelineEvent }) {
           top: cardTop,
         }}
       >
-        <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <span className="font-mono text-[11px] font-bold uppercase text-current/70">
             {dateLabel}
           </span>
-          <span
-            className="shrink-0 border-[2px] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]"
-            style={{ borderColor: category.bg, color: category.bg }}
-          >
-            {category.label}
+          <span className="flex shrink-0 items-start gap-2">
+            <span
+              className="border-[2px] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]"
+              style={{ borderColor: category.bg, color: category.bg }}
+            >
+              {category.label}
+            </span>
+            {artistPhotoUrl && (
+              <Image
+                src={artistPhotoUrl}
+                alt={event.artist_name}
+                width={34}
+                height={34}
+                sizes="34px"
+                className="-mt-1 size-[34px] border-[2px] border-current object-cover"
+                unoptimized
+              />
+            )}
           </span>
         </div>
         <p className="line-clamp-5 text-[15px] font-black leading-tight">
@@ -481,7 +499,7 @@ export function TimelineShell({
         className="overflow-x-auto overflow-y-hidden border-b-[3px] border-[var(--riso-ink)]"
       >
         <div
-          className="relative h-[900px] min-w-full"
+          className="relative h-[1000px] min-w-full"
           style={{ width: timelineWidth }}
         >
           <div
