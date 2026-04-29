@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Space_Mono } from "next/font/google";
 import { CATEGORY_COLORS, type ArtCategory } from "@/lib/constants";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
+import { getFarFutureDuration, isFarFutureWork } from "@/lib/artwork-time";
 import { HalftoneOverlay } from "@/components/HalftoneOverlay";
 
 export const dynamic = "force-dynamic";
@@ -60,8 +61,9 @@ function isOngoingWork(artwork: HomeArtwork): boolean {
 }
 
 function getEndDate(artwork: HomeArtwork, now: Date): Date | null {
-  if (isOngoingWork(artwork)) return now;
-  if (!artwork.end_year) return null;
+  if (!artwork.end_year) {
+    return isOngoingWork(artwork) ? now : null;
+  }
 
   const month = artwork.end_month ?? 12;
   const day =
@@ -69,14 +71,29 @@ function getEndDate(artwork: HomeArtwork, now: Date): Date | null {
   return new Date(artwork.end_year, month - 1, day);
 }
 
-function getDayCount(artwork: HomeArtwork, now: Date): number | null {
+function isFutureWork(artwork: HomeArtwork, now: Date): boolean {
+  if (isFarFutureWork(artwork.slug, artwork.years_display)) return true;
+
+  const end = getEndDate(artwork, now);
+  return Boolean(end && end.getTime() > now.getTime());
+}
+
+function isPresentWork(artwork: HomeArtwork, now: Date): boolean {
+  return isOngoingWork(artwork) && !isFutureWork(artwork, now);
+}
+
+function getDayCountDisplay(artwork: HomeArtwork, now: Date): string | null {
+  const farFutureDuration = getFarFutureDuration(artwork.slug);
+  if (farFutureDuration) return farFutureDuration.daysDisplay;
+
   const start = getStartDate(artwork);
   const end = getEndDate(artwork, now);
   if (!start || !end) return null;
 
   const diffMs = end.getTime() - start.getTime();
   if (diffMs < 0) return null;
-  return Math.floor(diffMs / DAY_MS);
+
+  return Math.floor(diffMs / DAY_MS).toLocaleString();
 }
 
 function getHeroCopy(description: string | null): string {
@@ -107,12 +124,6 @@ function pickHeroArtwork(artworks: HomeArtwork[]): HeroArtwork | null {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
-function isFutureWork(artwork: HomeArtwork, now: Date): boolean {
-  if (isOngoingWork(artwork)) return false;
-  const end = getEndDate(artwork, now);
-  return Boolean(end && end.getTime() > now.getTime());
-}
-
 function getSortTime(date: Date | null, fallback: number): number {
   return date?.getTime() ?? fallback;
 }
@@ -123,7 +134,10 @@ function compareTitles(left: HomeArtwork, right: HomeArtwork): number {
 
 function buildWorkGroups(artworks: HomeArtwork[], now: Date): WorkGroup[] {
   const past = artworks
-    .filter((artwork) => !isOngoingWork(artwork) && !isFutureWork(artwork, now))
+    .filter(
+      (artwork) =>
+        !isPresentWork(artwork, now) && !isFutureWork(artwork, now)
+    )
     .sort(
       (left, right) =>
         getSortTime(getEndDate(right, now), Number.NEGATIVE_INFINITY) -
@@ -132,7 +146,7 @@ function buildWorkGroups(artworks: HomeArtwork[], now: Date): WorkGroup[] {
     );
 
   const present = artworks
-    .filter((artwork) => isOngoingWork(artwork))
+    .filter((artwork) => isPresentWork(artwork, now))
     .sort(
       (left, right) =>
         getSortTime(getStartDate(left), Number.POSITIVE_INFINITY) -
@@ -164,7 +178,7 @@ function WorkListItem({
   now: Date;
 }) {
   const cat = CATEGORY_COLORS[artwork.category];
-  const days = getDayCount(artwork, now);
+  const days = getDayCountDisplay(artwork, now);
 
   return (
     <Link
@@ -197,10 +211,10 @@ function WorkListItem({
       {days != null && (
         <div className="shrink-0 text-right">
           <div className="text-base font-black sm:text-lg">
-            {days.toLocaleString()}
+            {days}
           </div>
           <div className="text-[10px] font-black tracking-[0.1em] text-[var(--riso-muted)]">
-            DAYS{isOngoingWork(artwork) ? " +" : ""}
+            DAYS{isPresentWork(artwork, now) ? " +" : ""}
           </div>
         </div>
       )}

@@ -8,6 +8,7 @@ import { ImageWall } from "@/components/ImageWall";
 import { ClickableGallery } from "@/components/ClickableGallery";
 import { ArtworkLinks } from "@/components/ArtworkLinks";
 import { ExternalEmbed } from "@/components/ExternalEmbed";
+import { getFarFutureDuration } from "@/lib/artwork-time";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -85,12 +86,17 @@ interface ArtworkWithArtist {
 }
 
 function getDurationText(artwork: ArtworkWithArtist): string | null {
+  const farFutureDuration = getFarFutureDuration(artwork.slug);
+  if (farFutureDuration) {
+    return `${farFutureDuration.daysDisplay} days (${farFutureDuration.yearsDisplay})`;
+  }
+
   if (!artwork.start_year || !artwork.start_month || !artwork.start_day) return null;
 
   const start = new Date(artwork.start_year, artwork.start_month - 1, artwork.start_day);
   let end: Date;
 
-  if (artwork.is_ongoing || !artwork.end_year) {
+  if (!artwork.end_year) {
     end = new Date();
   } else if (artwork.end_month && artwork.end_day) {
     end = new Date(artwork.end_year, artwork.end_month - 1, artwork.end_day);
@@ -104,10 +110,17 @@ function getDurationText(artwork: ArtworkWithArtist): string | null {
   if (diffMs < 0) return null;
 
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const years = Math.floor(days / 365.25);
+  const years =
+    artwork.end_year &&
+    artwork.start_month === 1 &&
+    artwork.start_day === 1 &&
+    artwork.end_month === 1 &&
+    artwork.end_day === 1
+      ? artwork.end_year - artwork.start_year
+      : Math.floor(days / 365.25);
   const formattedDays = days.toLocaleString();
 
-  if (artwork.is_ongoing) {
+  if (artwork.is_ongoing && !artwork.end_year) {
     if (years >= 2) {
       return `${formattedDays} days and counting (${years} years)`;
     }
