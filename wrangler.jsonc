@@ -1,0 +1,81 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "motba-web",
+  "compatibility_date": "2026-03-26",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "motba-web"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "motba",
+      "database_id": "7c9ab588-a220-49d5-9d07-f9350e118f58",
+      "preview_database_id": "7c9ab588-a220-49d5-9d07-f9350e118f58",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MOTBA_BUCKET",
+      "bucket_name": "motba"
+    }
+  ],
+  "vars": {
+    "ACCESS_AUD": "",
+    "ACCESS_TEAM_DOMAIN": "",
+    "ADMIN_EMAILS": "jonathan@jonathanmann.net",
+    "ALLOW_LOCAL_ADMIN": "false",
+    "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "daasdsuhz",
+    "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-f6ad53a541b04e8aa66fe5e0dad12eb8.r2.dev",
+    "NEXTJS_ENV": "production",
+    "RESEND_FROM_EMAIL": "MOTBA <noreply@motba.art>"
+  },
+  "env": {
+    "preview": {
+      "name": "motba-web-preview",
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "motba-web-preview"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "motba-db-preview",
+          "database_id": "11111111-1111-1111-1111-111111111111",
+          "preview_database_id": "11111111-1111-1111-1111-111111111111",
+          "migrations_dir": "./migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MOTBA_BUCKET",
+          "bucket_name": "motba"
+        }
+      ],
+      "vars": {
+        "ACCESS_AUD": "",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ADMIN_EMAILS": "jonathan@jonathanmann.net",
+        "ALLOW_LOCAL_ADMIN": "false",
+        "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "daasdsuhz",
+        "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-f6ad53a541b04e8aa66fe5e0dad12eb8.r2.dev",
+        "NEXTJS_ENV": "production",
+        "RESEND_FROM_EMAIL": "MOTBA <noreply@motba.art>"
+      }
+    }
+  }
+}

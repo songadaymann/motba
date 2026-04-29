@@ -1,0 +1,113 @@
+# Design Implementation Plan: Home Page — Risograph / Dithered Hourglass
+
+## Summary
+- **Scope:** Full page redesign
+- **Target:** `src/app/page.tsx` (plus layout/header/footer)
+- **Winner:** Risograph style with dithered hourglass decorative element
+- **Key visual language:** Sage green `#c5cdb0` background, halftone dot textures, heavy black `#1a1a1a` type (Arial Black / Impact weight), clock-in-O logo motif, Courier New for body text, dithered hourglass SVG, stamp-like category badges
+
+## Design Tokens
+
+### Colors
+- **Background:** `#c5cdb0` (sage green)
+- **Ink / Text:** `#1a1a1a` (near-black)
+- **Muted text:** `#555`
+- **Halftone overlay:** `radial-gradient(circle, #1a1a1a08 1px, transparent 1px)` at `4px 4px`
+- **Category colors:** Keep existing `CATEGORY_COLORS` from constants
+
+### Typography
+- **Headings:** `'Arial Black', 'Impact', sans-serif` — weight 900, uppercase, letter-spacing 0.1-0.3em
+- **Body:** `'Courier New', monospace` — bold weight, for descriptions/subtitles
+- **Logo:** 80px with inline SVG clock replacing "O"
+- **Subtitle "Museum of Time Based Art":** 22px, weight 900, letter-spacing 0.2em, uppercase
+
+### Borders & Dividers
+- **Primary borders:** 3px solid `#1a1a1a`
+- **List dividers:** 2px solid `#1a1a1a33`
+- **Dithered divider:** 12px tall halftone dot strip (`radial-gradient` at 30% opacity)
+- **Category stamps:** 2px solid border in category color, 9px uppercase text
+
+## Files to Change
+
+- [ ] `src/app/page.tsx` — Complete visual overhaul (hero, artwork grid, submit CTA)
+- [ ] `src/app/globals.css` — Add sage green CSS custom properties for the risograph theme
+- [ ] `src/components/layout/Header.tsx` — Restyle: black ink border-bottom, clock-in-O logo, uppercase nav with underline-active-state
+- [ ] `src/components/layout/Footer.tsx` — Match risograph style (ink borders, sage bg, courier mono text)
+- [ ] `src/components/ClockO.tsx` — **NEW** — Reusable SVG clock component (replaces "O" in MOTBA)
+- [ ] `src/components/DitheredHourglass.tsx` — **NEW** — SVG hourglass decorative element for hero
+- [ ] `src/components/HalftoneOverlay.tsx` — **NEW** — Reusable halftone dot texture overlay
+
+## Implementation Steps
+
+### 1. Create shared components
+- `ClockO.tsx`: SVG clock icon with configurable `size` prop, uses `currentColor`
+- `DitheredHourglass.tsx`: SVG hourglass with randomized halftone dots (sand grains), frame lines top/bottom
+- `HalftoneOverlay.tsx`: Absolute-positioned div with `radial-gradient` dot pattern, `pointer-events: none`
+
+### 2. Update globals.css
+- Add risograph theme variables under `:root`:
+  - `--riso-sage: #c5cdb0`
+  - `--riso-ink: #1a1a1a`
+  - `--riso-muted: #555`
+- Keep existing shadcn variables (they're used by UI components in admin, etc.)
+
+### 3. Restyle Header
+- Background: sage green (from CSS var)
+- Logo: `M` + `<ClockO />` + `TBA` inline, 20px, weight 900
+- Nav links: 12px uppercase, weight 900, letter-spacing 0.1em
+- Active link: 3px underline, `textUnderlineOffset: 4px`
+- Border-bottom: 3px solid ink
+- Keep mobile hamburger menu functionality, restyle to match
+
+### 4. Redesign Home Page (`page.tsx`)
+- **Hero section:**
+  - Large `M<ClockO />TBA` at 80px
+  - `<DitheredHourglass />` below logo
+  - "MUSEUM OF TIME BASED ART" subtitle at 22px, weight 900
+  - Description in Courier New, 16px
+  - Two buttons: filled ink (Browse Artists) + outlined (Timeline)
+- **Dithered divider** between hero and works
+- **Works list:**
+  - Keep Supabase data fetching (existing query)
+  - Grid layout: `48px (number) | 1fr (info) | auto (days)`
+  - Numbered rows (01, 02, 03...)
+  - Category stamp badges with colored borders
+  - Artist name + years in Courier New
+  - Day count right-aligned, bold, with "DAYS +" for ongoing
+- **Submit CTA:**
+  - Darker sage background (`#1a1a1a08`)
+  - 3px ink border-top
+  - Same button style
+
+### 5. Restyle Footer
+- 3px solid ink border-top
+- Sage background
+- Courier New for text
+- Keep existing links
+
+### 6. Verify existing functionality preserved
+- All `<Link>` components to `/artists`, `/artworks/[slug]`, `/timeline`, `/submit` remain
+- Supabase data fetching unchanged
+- `revalidate = 60` kept
+- Image rendering via `cloudinaryUrl()` + Next.js `<Image>` unchanged
+- Category color hover overlays on artwork images preserved
+- Mobile responsive behavior maintained
+
+## Accessibility Checklist
+- [ ] All nav links remain keyboard-focusable
+- [ ] Focus states visible (ink-colored ring)
+- [ ] Color contrast: `#1a1a1a` on `#c5cdb0` = 7.2:1 ratio (passes AAA)
+- [ ] Decorative SVGs have `aria-hidden="true"`
+- [ ] Buttons have clear text labels
+
+## Testing Checklist
+- [ ] Home page loads with Supabase data
+- [ ] Artwork links navigate correctly
+- [ ] Mobile nav hamburger still works
+- [ ] Category badges display correct colors
+- [ ] Halftone overlay doesn't interfere with click events (`pointer-events: none`)
+- [ ] Page builds without errors (`npm run build`)
+
+---
+
+*Generated by Design Lab*
