@@ -1,10 +1,16 @@
 import { getHomeArtworks } from "@/lib/d1";
-import { Space_Mono } from "next/font/google";
+import { Cossette_Texte, Space_Mono } from "next/font/google";
 import { HomeExperience, type HomeArtwork } from "./home-experience";
 
 export const dynamic = "force-dynamic";
 
 const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+});
+
+const cossetteTexte = Cossette_Texte({
   subsets: ["latin"],
   weight: ["400", "700"],
   display: "swap",
@@ -28,6 +34,7 @@ export default async function HomePage() {
       initialHeroArtworkId={pickInitialHeroId(artworks)}
       generatedAt={new Date().toISOString()}
       spaceMonoClassName={spaceMono.className}
+      bodyTextClassName={cossetteTexte.className}
     />
   );
 }

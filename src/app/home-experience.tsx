@@ -233,10 +233,12 @@ function HeroCarousel({
   heroArtworks,
   initialHeroArtworkId,
   spaceMonoClassName,
+  bodyTextClassName,
 }: {
   heroArtworks: HeroArtwork[];
   initialHeroArtworkId: string | null;
   spaceMonoClassName: string;
+  bodyTextClassName: string;
 }) {
   const initialIndex = Math.max(
     heroArtworks.findIndex((artwork) => artwork.id === initialHeroArtworkId),
@@ -343,7 +345,7 @@ function HeroCarousel({
             </div>
 
             <p
-              className={`${spaceMonoClassName} text-sm font-bold leading-relaxed text-[var(--riso-ink)]/85 sm:text-base`}
+              className={`${bodyTextClassName} text-base font-normal leading-relaxed text-[var(--riso-ink)]/85 sm:text-lg`}
             >
               {getHeroCopy(heroArtwork.description)}
             </p>
@@ -443,9 +445,11 @@ function SortMenu({
 function AboutSection({
   songADayCount,
   spaceMonoClassName,
+  bodyTextClassName,
 }: {
   songADayCount: string;
   spaceMonoClassName: string;
+  bodyTextClassName: string;
 }) {
   return (
     <section
@@ -474,7 +478,7 @@ function AboutSection({
             A living index of time-based art
           </h2>
           <div
-            className={`${spaceMonoClassName} grid gap-4 text-sm font-bold leading-relaxed text-[var(--riso-ink)]/85 sm:text-base`}
+            className={`${bodyTextClassName} grid gap-4 text-base font-normal leading-relaxed text-[var(--riso-ink)]/85 sm:text-lg`}
           >
             <p>
               Hi, I&rsquo;m Jonathan Mann. I&rsquo;m on day {songADayCount} of
@@ -525,11 +529,13 @@ export function HomeExperience({
   initialHeroArtworkId,
   generatedAt,
   spaceMonoClassName,
+  bodyTextClassName,
 }: {
   artworks: HomeArtwork[];
   initialHeroArtworkId: string | null;
   generatedAt: string;
   spaceMonoClassName: string;
+  bodyTextClassName: string;
 }) {
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORTS);
   const now = useMemo(() => new Date(generatedAt), [generatedAt]);
@@ -561,6 +567,7 @@ export function HomeExperience({
         heroArtworks={heroArtworks}
         initialHeroArtworkId={initialHeroArtworkId}
         spaceMonoClassName={spaceMonoClassName}
+        bodyTextClassName={bodyTextClassName}
       />
 
       <section className="relative z-[2] border-b-[3px] border-[var(--riso-ink)]">
@@ -606,6 +613,7 @@ export function HomeExperience({
       <AboutSection
         songADayCount={songADayCount}
         spaceMonoClassName={spaceMonoClassName}
+        bodyTextClassName={bodyTextClassName}
       />
     </div>
   );
