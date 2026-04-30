@@ -349,12 +349,12 @@ function WorkListItem({
       className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 py-4 border-b-[2px] border-[var(--riso-ink)]/20 transition-colors hover:bg-[var(--riso-ink)]/[0.04]"
     >
       <div className="min-w-0">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
+        <div className="mb-2 grid gap-1.5">
           <h3 className="text-sm font-black uppercase leading-tight sm:text-base">
             {artwork.title}
           </h3>
           <span
-            className="shrink-0 border-[2px] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]"
+            className="w-fit border-[2px] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em]"
             style={{
               borderColor: cat.bg,
               color: cat.bg,
