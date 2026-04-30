@@ -37,6 +37,8 @@ type WorkGroup = {
 };
 
 const DAY_MS = 1000 * 60 * 60 * 24;
+const SONG_A_DAY_START_UTC = Date.UTC(2009, 0, 1);
+const ABOUT_IMAGE_SRC = "/jonathan-about.jpg";
 const GROUP_TITLES: WorkGroupTitle[] = ["Past", "Present", "Future"];
 const DEFAULT_SORTS: SortState = {
   Past: "end",
@@ -49,6 +51,12 @@ const SORT_LABELS: Record<SortKey, string> = {
   end: "End date",
   type: "Art type",
 };
+const NEW_YORK_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
 
 function getLastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
@@ -127,6 +135,21 @@ function getHeroCopy(description: string | null): string {
 
   if (lastSentence > 140) return trimmed.slice(0, lastSentence + 1);
   return `${trimmed.replace(/\s+\S*$/, "")}...`;
+}
+
+function getSongADayCount(now: Date): string {
+  const parts = NEW_YORK_DATE_FORMAT.formatToParts(now);
+  const getPart = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value);
+  const todayUtc = Date.UTC(
+    getPart("year"),
+    getPart("month") - 1,
+    getPart("day")
+  );
+
+  return (
+    Math.max(1, Math.floor((todayUtc - SONG_A_DAY_START_UTC) / DAY_MS) + 1)
+  ).toLocaleString();
 }
 
 function hasHeroImage(artwork: HomeArtwork): artwork is HeroArtwork {
@@ -417,6 +440,86 @@ function SortMenu({
   );
 }
 
+function AboutSection({
+  songADayCount,
+  spaceMonoClassName,
+}: {
+  songADayCount: string;
+  spaceMonoClassName: string;
+}) {
+  return (
+    <section
+      id="about"
+      className="relative z-[2] border-b-[3px] border-[var(--riso-ink)] bg-[var(--riso-ink)]/[0.04]"
+    >
+      <div className="mx-auto grid max-w-7xl gap-7 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:py-16">
+        <div className="relative aspect-[3/2] overflow-hidden border-[3px] border-[var(--riso-ink)]">
+          <Image
+            src={ABOUT_IMAGE_SRC}
+            alt="Jonathan Mann with music gear"
+            fill
+            sizes="(min-width: 1024px) 520px, calc(100vw - 32px)"
+            className="object-cover object-[64%_center]"
+            unoptimized
+          />
+        </div>
+
+        <div>
+          <p
+            className={`${spaceMonoClassName} mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--riso-muted)]`}
+          >
+            About MOTBA
+          </p>
+          <h2 className="mb-5 text-3xl font-black uppercase leading-none sm:text-5xl">
+            A living index of time-based art
+          </h2>
+          <div
+            className={`${spaceMonoClassName} grid gap-4 text-sm font-bold leading-relaxed text-[var(--riso-ink)]/85 sm:text-base`}
+          >
+            <p>
+              Hi, I&rsquo;m Jonathan Mann. I&rsquo;m on day {songADayCount} of
+              writing a Song A Day.
+            </p>
+            <p>
+              My idea for this site is to build an exhaustive, authoritative
+              compendium of every art project that uses time as part of the
+              work.
+            </p>
+            <p>
+              For the photography section, I leaned heavily on the groundwork
+              already done by{" "}
+              <Link
+                href="/artists/jk-keller"
+                className="underline decoration-[2px] underline-offset-4"
+              >
+                JK Keller
+              </Link>
+              .
+            </p>
+            <p>
+              If you know of a project we&rsquo;re missing, please{" "}
+              <Link
+                href="/submit"
+                className="underline decoration-[2px] underline-offset-4"
+              >
+                submit it
+              </Link>{" "}
+              or{" "}
+              <a
+                href="mailto:jonathan@jonathanmann.net"
+                className="underline decoration-[2px] underline-offset-4"
+              >
+                email me
+              </a>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function HomeExperience({
   artworks,
   initialHeroArtworkId,
@@ -438,6 +541,7 @@ export function HomeExperience({
     () => buildWorkGroups(artworks, now, sortState),
     [artworks, now, sortState]
   );
+  const songADayCount = useMemo(() => getSongADayCount(now), [now]);
 
   function setGroupSort(groupTitle: WorkGroupTitle, value: SortKey) {
     setSortState((current) => ({
@@ -499,25 +603,10 @@ export function HomeExperience({
         </div>
       </section>
 
-      <section className="relative z-[2] bg-[var(--riso-ink)]/[0.04]">
-        <div className="mx-auto max-w-[700px] px-4 py-12 text-center sm:px-6">
-          <h2 className="mb-2 text-xl font-black uppercase tracking-[0.05em] sm:text-2xl">
-            Know an artist we&apos;re missing?
-          </h2>
-          <p
-            className={`${spaceMonoClassName} mb-5 text-sm font-bold text-[var(--riso-muted)]`}
-          >
-            Help us build the most comprehensive collection of long-duration art
-            projects.
-          </p>
-          <Link
-            href="/submit"
-            className="inline-flex h-11 items-center justify-center border-[3px] border-[var(--riso-ink)] bg-[var(--riso-ink)] px-7 text-xs font-black uppercase tracking-[0.15em] text-[var(--riso-sage)] transition-opacity hover:opacity-80"
-          >
-            Submit an Artist
-          </Link>
-        </div>
-      </section>
+      <AboutSection
+        songADayCount={songADayCount}
+        spaceMonoClassName={spaceMonoClassName}
+      />
     </div>
   );
 }
