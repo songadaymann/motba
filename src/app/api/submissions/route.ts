@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { buildEmailLayout, sendEmail } from "@/lib/email";
 import { createEmailToken } from "@/lib/auth";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 import {
   createPublicSubmission,
   markSubmissionVerificationSent,
@@ -15,15 +16,19 @@ const schema = z.object({
   submitterRelationship: z.string().trim().max(160).optional(),
   artistName: z.string().trim().min(1).max(200),
   artistWebsite: z.string().trim().url().max(500).optional().or(z.literal("")),
+  artistPhotoCloudinaryId: z.string().trim().max(300).optional().or(z.literal("")),
   artworkTitle: z.string().trim().min(1).max(240),
   category: z.enum(["music", "art", "writing", "performance", "photography"]),
+  projectFrequency: z.enum(["daily", "yearly"]).optional(),
   yearsDisplay: z.string().trim().max(120).optional(),
   startYear: z.coerce.number().int().min(1).max(currentYear + 100).optional().or(z.literal("")),
   endYear: z.coerce.number().int().min(1).max(currentYear + 100).optional().or(z.literal("")),
   isOngoing: z.boolean().optional(),
   description: z.string().trim().max(4000).optional(),
   externalUrl: z.string().trim().url().max(500).optional().or(z.literal("")),
+  heroImageCloudinaryId: z.string().trim().max(300).optional().or(z.literal("")),
   website: z.string().optional(),
+  turnstileToken: z.string().max(2048).optional(),
 });
 
 function escapeHtml(value: string) {
@@ -52,20 +57,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  if (!(await verifyTurnstileToken(parsed.data.turnstileToken, request))) {
+    return NextResponse.json(
+      { error: "Please verify that you are human." },
+      { status: 400 }
+    );
+  }
+
   const { submission, privateToken } = await createPublicSubmission({
     submitterName: parsed.data.submitterName,
     submitterEmail: parsed.data.submitterEmail,
     submitterRelationship: parsed.data.submitterRelationship,
     artistName: parsed.data.artistName,
     artistWebsite: parsed.data.artistWebsite || null,
+    artistPhotoCloudinaryId: parsed.data.artistPhotoCloudinaryId || null,
     artworkTitle: parsed.data.artworkTitle,
     category: parsed.data.category,
+    projectFrequency: parsed.data.projectFrequency ?? "daily",
     yearsDisplay: parsed.data.yearsDisplay,
     startYear: numberOrNull(parsed.data.startYear ?? ""),
     endYear: numberOrNull(parsed.data.endYear ?? ""),
     isOngoing: parsed.data.isOngoing,
     description: parsed.data.description,
     externalUrl: parsed.data.externalUrl || null,
+    heroImageCloudinaryId: parsed.data.heroImageCloudinaryId || null,
   });
 
   const statusPath = `/submissions/${submission.id}?key=${encodeURIComponent(privateToken)}`;

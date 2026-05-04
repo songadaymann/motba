@@ -12,7 +12,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CATEGORY_COLORS, CATEGORIES, type ArtCategory } from "@/lib/constants";
+import {
+  CATEGORY_COLORS,
+  CATEGORIES,
+  PROJECT_FREQUENCIES,
+  PROJECT_FREQUENCY_LABELS,
+  type ArtCategory,
+  type ProjectFrequency,
+} from "@/lib/constants";
 import { useRouter } from "next/navigation";
 
 interface ArtistRef {
@@ -27,6 +34,7 @@ interface Artwork {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency;
   years_display: string | null;
   start_year: number | null;
   start_month: number | null;
@@ -60,6 +68,7 @@ const EDITABLE_FIELDS: FieldDef[] = [
   { key: "title", label: "Title", type: "text" },
   { key: "artist_id", label: "Artist", type: "select" },
   { key: "category", label: "Category", type: "select", options: [...CATEGORIES] },
+  { key: "project_frequency", label: "Rhythm", type: "select", options: [...PROJECT_FREQUENCIES] },
   { key: "years_display", label: "Years", type: "text" },
   { key: "start_year", label: "Start Y", type: "number" },
   { key: "start_month", label: "Start M", type: "number" },
@@ -350,7 +359,9 @@ export function ArtworksTable({
           >
             {field.options.map((opt) => (
               <option key={opt} value={opt}>
-                {opt}
+                {field.key === "project_frequency"
+                  ? PROJECT_FREQUENCY_LABELS[opt as ProjectFrequency]
+                  : opt}
               </option>
             ))}
           </select>
@@ -453,6 +464,21 @@ export function ArtworksTable({
           >
             {CATEGORY_COLORS[cat]?.label || cat}
           </Badge>
+        </div>
+      );
+    }
+
+    if (field.key === "project_frequency") {
+      const frequency = value === "yearly" ? "yearly" : "daily";
+      return (
+        <div
+          onClick={() => startEdit(artwork.id, field.key, frequency)}
+          className={`cursor-pointer rounded px-1 py-0.5 hover:bg-accent transition-colors ${
+            isSavingRow ? "opacity-50" : ""
+          }`}
+          title="Click to edit"
+        >
+          {PROJECT_FREQUENCY_LABELS[frequency]}
         </div>
       );
     }

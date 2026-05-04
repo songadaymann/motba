@@ -35,6 +35,17 @@ export type ArtCategory = keyof typeof CATEGORY_COLORS;
 
 export const CATEGORIES = Object.keys(CATEGORY_COLORS) as ArtCategory[];
 
+export const PROJECT_FREQUENCY_LABELS = {
+  daily: "Daily",
+  yearly: "Yearly",
+} as const;
+
+export type ProjectFrequency = keyof typeof PROJECT_FREQUENCY_LABELS;
+
+export const PROJECT_FREQUENCIES = Object.keys(
+  PROJECT_FREQUENCY_LABELS
+) as ProjectFrequency[];
+
 export const SITE_CONFIG = {
   name: "The Museum of Time Based Art",
   shortName: "MOTBA",

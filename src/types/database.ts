@@ -13,6 +13,7 @@ export type VerificationStatus =
   | "needs_input";
 
 export type SubmissionStatus = "pending" | "approved" | "rejected";
+export type ProjectFrequency = "daily" | "yearly";
 export type ArtistMembershipRole = "owner" | "representative" | "contributor";
 export type ArtistMembershipStatus = "invited" | "active" | "revoked";
 
@@ -46,6 +47,7 @@ export interface Artwork {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency;
   years_display: string | null;
   start_year: number | null;
   start_month: number | null;
@@ -86,6 +88,7 @@ export interface Submission {
   artist_photo_cloudinary_id: string | null;
   artwork_title: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency;
   years_display: string | null;
   start_year: number | null;
   end_year: number | null;
@@ -130,6 +133,7 @@ export interface TimelineEntry {
   artwork_title: string;
   artwork_slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency;
   years_display: string | null;
   start_year: number | null;
   start_month: number | null;

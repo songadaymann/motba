@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { SignInForm } from "./sign-in-form";
 import { safeNextPath } from "@/lib/auth";
+import { getTurnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = {
   title: "Sign In",
 };
+
+export const dynamic = "force-dynamic";
 
 export default async function SignInPage({
   searchParams,
@@ -13,6 +16,7 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
   const nextPath = safeNextPath(params.next) ?? "/account";
+  const turnstileSiteKey = getTurnstileSiteKey();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -26,7 +30,7 @@ export default async function SignInPage({
         </p>
       )}
       <div className="mt-8">
-        <SignInForm nextPath={nextPath} />
+        <SignInForm nextPath={nextPath} turnstileSiteKey={turnstileSiteKey} />
       </div>
     </div>
   );

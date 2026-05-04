@@ -2,12 +2,19 @@ import { getArtistBySlug, getArtistMetadataBySlug } from "@/lib/d1";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { CATEGORY_COLORS, type ArtCategory } from "@/lib/constants";
+import {
+  CATEGORY_COLORS,
+  type ArtCategory,
+  type ProjectFrequency,
+} from "@/lib/constants";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
 import { GalleryPreview } from "@/components/GalleryPreview";
 import { ImageWall } from "@/components/ImageWall";
 import { ArtworkLinks } from "@/components/ArtworkLinks";
-import { getFarFutureDuration } from "@/lib/artwork-time";
+import {
+  getArtworkDurationText,
+  getArtworkYearsDisplay,
+} from "@/lib/artwork-time";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +43,7 @@ interface ArtworkRow {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency;
   years_display: string | null;
   is_ongoing: boolean;
   description: string | null;
@@ -50,54 +58,6 @@ interface ArtworkRow {
   end_day: number | null;
   artwork_images: ArtworkImage[];
   artwork_links: ArtworkLinkRow[];
-}
-
-function getDurationText(artwork: ArtworkRow): string | null {
-  const farFutureDuration = getFarFutureDuration(artwork.slug);
-  if (farFutureDuration) {
-    return `${farFutureDuration.daysDisplay} days (${farFutureDuration.yearsDisplay})`;
-  }
-
-  if (!artwork.start_year || !artwork.start_month || !artwork.start_day) return null;
-
-  const start = new Date(artwork.start_year, artwork.start_month - 1, artwork.start_day);
-  let end: Date;
-
-  if (!artwork.end_year) {
-    end = new Date();
-  } else if (artwork.end_month && artwork.end_day) {
-    end = new Date(artwork.end_year, artwork.end_month - 1, artwork.end_day);
-  } else if (artwork.end_year) {
-    end = new Date(artwork.end_year, 11, 31);
-  } else {
-    return null;
-  }
-
-  const diffMs = end.getTime() - start.getTime();
-  if (diffMs < 0) return null;
-
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const years =
-    artwork.end_year &&
-    artwork.start_month === 1 &&
-    artwork.start_day === 1 &&
-    artwork.end_month === 1 &&
-    artwork.end_day === 1
-      ? artwork.end_year - artwork.start_year
-      : Math.floor(days / 365.25);
-  const formattedDays = days.toLocaleString();
-
-  if (artwork.is_ongoing && !artwork.end_year) {
-    if (years >= 2) {
-      return `${formattedDays} days and counting (${years} years)`;
-    }
-    return `${formattedDays} days and counting`;
-  } else {
-    if (years >= 2) {
-      return `${formattedDays} days (${years} years)`;
-    }
-    return `${formattedDays} days`;
-  }
 }
 
 interface ArtistRow {
@@ -217,78 +177,80 @@ export default async function ArtistPage({
           {/* Multi-work: show Works list */}
           <h2 className="mb-4 text-xl font-semibold">Works</h2>
           <div className="space-y-4">
-            {typedArtist.artworks.map((artwork) => (
-              <Link
-                key={artwork.id}
-                href={`/artworks/${artwork.slug}`}
-                className="group block rounded-lg border border-border overflow-hidden transition-colors hover:bg-accent"
-              >
-                <div className="flex flex-col sm:flex-row">
-                  {artwork.hero_image_cloudinary_id ? (
-                    <div className="sm:w-48 h-40 sm:h-auto shrink-0">
-                      <img
-                        src={cloudinaryUrl(
-                          artwork.hero_image_cloudinary_id,
-                          "thumbnail"
-                        )}
-                        alt={artwork.title}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="sm:w-48 h-40 sm:h-auto shrink-0 flex items-center justify-center"
-                      style={{
-                        backgroundColor: CATEGORY_COLORS[artwork.category].bg + "15",
-                      }}
-                    >
-                      <span
-                        className="text-sm font-medium"
-                        style={{ color: CATEGORY_COLORS[artwork.category].bg }}
-                      >
-                        {CATEGORY_COLORS[artwork.category].label}
-                      </span>
-                    </div>
-                  )}
-                  <div className="p-4 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold group-hover:text-primary">
-                        {artwork.title}
-                      </h3>
-                      <Badge
-                        variant="outline"
-                        className="shrink-0 text-xs"
+            {typedArtist.artworks.map((artwork) => {
+              const yearsDisplay = getArtworkYearsDisplay(artwork);
+              const duration = getArtworkDurationText(artwork);
+
+              return (
+                <Link
+                  key={artwork.id}
+                  href={`/artworks/${artwork.slug}`}
+                  className="group block rounded-lg border border-border overflow-hidden transition-colors hover:bg-accent"
+                >
+                  <div className="flex flex-col sm:flex-row">
+                    {artwork.hero_image_cloudinary_id ? (
+                      <div className="sm:w-48 h-40 sm:h-auto shrink-0">
+                        <img
+                          src={cloudinaryUrl(
+                            artwork.hero_image_cloudinary_id,
+                            "thumbnail"
+                          )}
+                          alt={artwork.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="sm:w-48 h-40 sm:h-auto shrink-0 flex items-center justify-center"
                         style={{
-                          borderColor: CATEGORY_COLORS[artwork.category].bg,
-                          color: CATEGORY_COLORS[artwork.category].bg,
+                          backgroundColor: CATEGORY_COLORS[artwork.category].bg + "15",
                         }}
                       >
-                        {CATEGORY_COLORS[artwork.category].label}
-                      </Badge>
-                    </div>
-                    {artwork.years_display && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {artwork.years_display}
-                        {artwork.is_ongoing && " (ongoing)"}
-                      </p>
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: CATEGORY_COLORS[artwork.category].bg }}
+                        >
+                          {CATEGORY_COLORS[artwork.category].label}
+                        </span>
+                      </div>
                     )}
-                    {(() => {
-                      const duration = getDurationText(artwork);
-                      return duration ? (
+                    <div className="p-4 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold group-hover:text-primary">
+                          {artwork.title}
+                        </h3>
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 text-xs"
+                          style={{
+                            borderColor: CATEGORY_COLORS[artwork.category].bg,
+                            color: CATEGORY_COLORS[artwork.category].bg,
+                          }}
+                        >
+                          {CATEGORY_COLORS[artwork.category].label}
+                        </Badge>
+                      </div>
+                      {yearsDisplay && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {yearsDisplay}
+                          {artwork.is_ongoing && " (ongoing)"}
+                        </p>
+                      )}
+                      {duration && (
                         <p className="mt-1 text-sm font-medium" style={{ color: CATEGORY_COLORS[artwork.category].bg }}>
                           {duration}
                         </p>
-                      ) : null;
-                    })()}
-                    {artwork.description && (
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                        {artwork.description}
-                      </p>
-                    )}
+                      )}
+                      {artwork.description && (
+                        <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                          {artwork.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </>
       )}
@@ -304,7 +266,8 @@ export default async function ArtistPage({
 
 function SingleWorkView({ artwork }: { artwork: ArtworkRow }) {
   const categoryColor = CATEGORY_COLORS[artwork.category];
-  const duration = getDurationText(artwork);
+  const yearsDisplay = getArtworkYearsDisplay(artwork);
+  const duration = getArtworkDurationText(artwork);
   const images = [...artwork.artwork_images].sort(
     (a, b) => a.sort_order - b.sort_order
   );
@@ -348,9 +311,9 @@ function SingleWorkView({ artwork }: { artwork: ArtworkRow }) {
           </Badge>
         </div>
 
-        {artwork.years_display && (
+        {yearsDisplay && (
           <p className="text-lg text-muted-foreground">
-            {artwork.years_display}
+            {yearsDisplay}
             {artwork.is_ongoing && (
               <span className="ml-2 inline-flex items-center gap-1 text-sm">
                 <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { getCurrentSession } from "@/lib/auth";
 import { listPasskeysForUser } from "@/lib/passkeys";
 import { listSubmissionsForUser } from "@/lib/submissions";
+import { PROJECT_FREQUENCY_LABELS } from "@/lib/constants";
 import { PasskeyPanel } from "./passkey-panel";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,9 @@ export default async function AccountPage() {
                 >
                   <p className="font-medium">{submission.artist_name}</p>
                   <p className="text-sm text-muted-foreground">
-                    {submission.artwork_title} · {submission.status}
+                    {submission.artwork_title} ·{" "}
+                    {PROJECT_FREQUENCY_LABELS[submission.project_frequency]} ·{" "}
+                    {submission.status}
                   </p>
                 </Link>
               ))}

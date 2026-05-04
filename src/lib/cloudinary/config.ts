@@ -37,11 +37,23 @@ function cloudinaryIdToR2Key(publicId: string): string {
   return key;
 }
 
+function transformedCloudinaryUrl(publicId: string, preset: ImagePreset): string {
+  if (!CLOUD_NAME) return "";
+  const transform = PRESET_TRANSFORMS[preset];
+  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transform}/${publicId}`;
+}
+
 export function cloudinaryUrl(
   publicId: string,
   preset: ImagePreset
 ): string {
   if (!publicId) return "";
+
+  // User-submitted images are uploaded directly to Cloudinary and are not
+  // mirrored to R2 by the static image pipeline.
+  if (publicId.startsWith("motba/submissions/") || publicId.startsWith("motba/start/")) {
+    return transformedCloudinaryUrl(publicId, preset);
+  }
 
   // Prefer R2 if configured
   if (R2_PUBLIC_URL) {
@@ -50,9 +62,7 @@ export function cloudinaryUrl(
   }
 
   // Fallback to Cloudinary
-  if (!CLOUD_NAME) return "";
-  const transform = PRESET_TRANSFORMS[preset];
-  return `https://res.cloudinary.com/${CLOUD_NAME}/image/upload/${transform}/${publicId}`;
+  return transformedCloudinaryUrl(publicId, preset);
 }
 
 export function cloudinaryResponsiveUrls(

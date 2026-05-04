@@ -18,9 +18,15 @@ function hasFlag(flag: string) {
 const envName = getArg("--env");
 const skipBuild = hasFlag("--skip-build");
 
+const TURNSTILE_TEST_SECRET_KEY = "1x0000000000000000000000000000000AA";
+
 const commandEnv = {
   ...process.env,
 };
+
+if (envName === "test" && !commandEnv.TURNSTILE_SECRET_KEY) {
+  commandEnv.TURNSTILE_SECRET_KEY = TURNSTILE_TEST_SECRET_KEY;
+}
 
 // Prefer an explicitly provided deploy-capable API token. Otherwise Wrangler
 // uses the logged-in OAuth session from the local machine.
@@ -61,6 +67,7 @@ const secrets = [
   ["CLOUDINARY_API_KEY", process.env.CLOUDINARY_API_KEY],
   ["CLOUDINARY_API_SECRET", process.env.CLOUDINARY_API_SECRET],
   ["RESEND_API_KEY", process.env.RESEND_API_KEY],
+  ["TURNSTILE_SECRET_KEY", commandEnv.TURNSTILE_SECRET_KEY],
 ] as const;
 
 for (const [name, value] of secrets) {

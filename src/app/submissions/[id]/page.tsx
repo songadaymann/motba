@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { cloudinaryUrl } from "@/lib/cloudinary/config";
 import { getCurrentSession } from "@/lib/auth";
+import { PROJECT_FREQUENCY_LABELS } from "@/lib/constants";
 import {
   getSubmissionByPrivateToken,
   getSubmissionForUser,
@@ -39,9 +41,40 @@ export default async function SubmissionStatusPage({
 
       <div className="mt-8 grid gap-6">
         <section className="border border-border p-5">
+          {(submission.hero_image_cloudinary_id ||
+            submission.artist_photo_cloudinary_id) && (
+            <div className="mb-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
+              {submission.hero_image_cloudinary_id && (
+                <div
+                  className="aspect-video border border-border bg-muted bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${cloudinaryUrl(
+                      submission.hero_image_cloudinary_id,
+                      "hero"
+                    )})`,
+                  }}
+                  role="img"
+                  aria-label={`${submission.artwork_title} project image`}
+                />
+              )}
+              {submission.artist_photo_cloudinary_id && (
+                <div
+                  className="aspect-square border border-border bg-muted bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${cloudinaryUrl(
+                      submission.artist_photo_cloudinary_id,
+                      "artist-photo"
+                    )})`,
+                  }}
+                  role="img"
+                  aria-label={`${submission.artist_name} artist photo`}
+                />
+              )}
+            </div>
+          )}
           <h2 className="text-xl font-bold">{submission.artwork_title}</h2>
           <p className="mt-2 text-sm uppercase tracking-[0.1em] text-muted-foreground">
-            {submission.category}
+            {submission.category} · {PROJECT_FREQUENCY_LABELS[submission.project_frequency]}
           </p>
           {submission.years_display && (
             <p className="mt-3 text-muted-foreground">{submission.years_display}</p>
