@@ -16,14 +16,50 @@ export type SubmissionStatus = "pending" | "approved" | "rejected";
 export type ProjectFrequency = "daily" | "yearly";
 export type ArtistMembershipRole = "owner" | "representative" | "contributor";
 export type ArtistMembershipStatus = "invited" | "active" | "revoked";
+export type UserProjectDuration = "week" | "month" | "year" | "open";
+export type UserProjectPrompt =
+  | "song"
+  | "poem"
+  | "photo"
+  | "play"
+  | "drawing"
+  | "dance"
+  | "other";
 
 export interface User {
   id: string;
   email: string;
   name: string | null;
+  username: string | null;
   created_at: string;
   updated_at: string;
   last_login_at: string | null;
+}
+
+export interface UserProject {
+  id: string;
+  user_id: string;
+  slug: string;
+  title: string;
+  duration: UserProjectDuration;
+  prompt: UserProjectPrompt;
+  custom_practice: string | null;
+  start_date: string;
+  upload_session_id: string;
+  profile_image_cloudinary_id: string | null;
+  hero_image_cloudinary_id: string | null;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserProjectEntry {
+  id: string;
+  project_id: string;
+  url: string;
+  label: string | null;
+  sort_order: number;
+  created_at: string;
 }
 
 export interface Artist {

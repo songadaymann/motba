@@ -4,7 +4,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CldUploadWidget } from "next-cloudinary";
 import {
   CalendarDays,
+  Check,
   CircleHelp,
+  Copy,
+  ExternalLink,
   ImageIcon,
   Link2,
   Plus,
@@ -18,6 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
 import { MediaEmbed, getMediaEmbedInfo } from "@/components/MediaEmbed";
+import { normalizeUsername, slugifyProjectSegment } from "@/lib/project-slugs";
+import type { SavedStartProject } from "@/lib/start-projects";
 
 type DurationId = "week" | "month" | "year" | "open";
 type PromptId = "song" | "poem" | "photo" | "play" | "drawing" | "dance" | "other";
@@ -58,6 +63,9 @@ type Entry = {
 };
 
 type SavedProject = {
+  id: string | null;
+  slug: string | null;
+  publicPath: string | null;
   uploadSessionId: string;
   title: string;
   duration: DurationId;
@@ -68,6 +76,8 @@ type SavedProject = {
   heroImage: ProjectImage | null;
   entries: Entry[];
 };
+
+type SyncState = "idle" | "saving" | "saved" | "error";
 
 const STORAGE_KEY = "motba-start-project-v1";
 
@@ -153,6 +163,9 @@ function formatEntryDate(startDate: string, index: number) {
 function getInitialProject(): SavedProject {
   const prompt = PROMPTS[0];
   return {
+    id: null,
+    slug: null,
+    publicPath: null,
     uploadSessionId: createProjectId(),
     title: "",
     duration: "week",
@@ -162,6 +175,33 @@ function getInitialProject(): SavedProject {
     profileImage: null,
     heroImage: null,
     entries: [],
+  };
+}
+
+function projectFromSavedProject(project: SavedStartProject): SavedProject {
+  return {
+    id: project.id,
+    slug: project.slug,
+    publicPath: project.publicPath,
+    uploadSessionId: project.uploadSessionId,
+    title: project.title,
+    duration: project.duration,
+    prompt: project.prompt,
+    customPractice: project.customPractice,
+    startDate: project.startDate,
+    profileImage: project.profileImageCloudinaryId
+      ? {
+          publicId: project.profileImageCloudinaryId,
+          previewUrl: cloudinaryUrl(project.profileImageCloudinaryId, "artist-photo"),
+        }
+      : null,
+    heroImage: project.heroImageCloudinaryId
+      ? {
+          publicId: project.heroImageCloudinaryId,
+          previewUrl: cloudinaryUrl(project.heroImageCloudinaryId, "hero"),
+        }
+      : null,
+    entries: project.entries,
   };
 }
 
@@ -176,6 +216,9 @@ function getStoredProject(): SavedProject {
       ...initial,
       ...parsed,
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+      id: parsed.id ?? null,
+      slug: parsed.slug ?? null,
+      publicPath: parsed.publicPath ?? null,
     };
   } catch {
     window.localStorage.removeItem(STORAGE_KEY);
@@ -201,25 +244,121 @@ function getProjectHeading(title: string) {
   return title.trim() || "Daily project";
 }
 
-export function StartProjectExperience() {
-  const [project, setProject] = useState<SavedProject>(getInitialProject);
+export function StartProjectExperience({
+  initialProject,
+  initialUsername,
+  siteUrl,
+}: {
+  initialProject: SavedStartProject | null;
+  initialUsername: string;
+  siteUrl: string;
+}) {
+  const [project, setProject] = useState<SavedProject>(() =>
+    initialProject ? projectFromSavedProject(initialProject) : getInitialProject()
+  );
+  const [username, setUsername] = useState(initialProject?.username ?? initialUsername);
   const [hasLoadedStorage, setHasLoadedStorage] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [url, setUrl] = useState("");
+  const [syncState, setSyncState] = useState<SyncState>("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      setProject(getStoredProject());
+      setProject(initialProject ? projectFromSavedProject(initialProject) : getStoredProject());
+      setUsername(initialProject?.username ?? initialUsername);
       setHasLoadedStorage(true);
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [initialProject, initialUsername]);
 
   useEffect(() => {
     if (!hasLoadedStorage) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
   }, [hasLoadedStorage, project]);
+
+  useEffect(() => {
+    if (!hasLoadedStorage) return;
+    if (!project.title.trim()) {
+      setSyncState("idle");
+      setSaveError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSyncState("saving");
+      setSaveError(null);
+
+      try {
+        const response = await fetch("/api/start-project", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            projectId: project.id,
+            username,
+            title: project.title,
+            duration: project.duration,
+            prompt: project.prompt,
+            customPractice: project.customPractice,
+            startDate: project.startDate,
+            uploadSessionId: project.uploadSessionId,
+            profileImageCloudinaryId: project.profileImage?.publicId ?? null,
+            heroImageCloudinaryId: project.heroImage?.publicId ?? null,
+            entries: project.entries.map((entry) => ({
+              id: entry.id,
+              url: entry.url,
+              label: entry.label,
+              createdAt: entry.createdAt,
+            })),
+          }),
+          signal: controller.signal,
+        });
+        const body = (await response.json()) as {
+          project?: SavedStartProject;
+          error?: string;
+        };
+
+        if (!response.ok || !body.project) {
+          throw new Error(body.error || "Could not save project.");
+        }
+
+        setUsername(body.project.username);
+        setProject((current) => ({
+          ...current,
+          id: body.project!.id,
+          slug: body.project!.slug,
+          publicPath: body.project!.publicPath,
+          uploadSessionId: body.project!.uploadSessionId,
+        }));
+        setSyncState("saved");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setSyncState("error");
+        setSaveError(error instanceof Error ? error.message : "Could not save project.");
+      }
+    }, 700);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    hasLoadedStorage,
+    project.id,
+    project.title,
+    project.duration,
+    project.prompt,
+    project.customPractice,
+    project.startDate,
+    project.uploadSessionId,
+    project.profileImage?.publicId,
+    project.heroImage?.publicId,
+    project.entries,
+    username,
+  ]);
 
   const duration = DURATIONS.find((item) => item.id === project.duration) ?? DURATIONS[0];
   const prompt = PROMPTS.find((item) => item.id === project.prompt) ?? PROMPTS[0];
@@ -228,6 +367,9 @@ export function StartProjectExperience() {
   const progress = duration.days
     ? Math.min(100, Math.round((project.entries.length / duration.days) * 100))
     : 0;
+  const previewPath = `/${normalizeUsername(username)}/${slugifyProjectSegment(project.title, "daily-project")}`;
+  const sharePath = project.publicPath ?? previewPath;
+  const shareUrl = new URL(sharePath, siteUrl).toString();
 
   const platformCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -301,6 +443,12 @@ export function StartProjectExperience() {
     setUrl("");
   }
 
+  async function copyShareUrl() {
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1400);
+  }
+
   return (
     <main
       className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6"
@@ -344,6 +492,62 @@ export function StartProjectExperience() {
                 }))
               }
             />
+          </div>
+
+          <div className="grid gap-3 border border-border p-3">
+            <div className="grid gap-2">
+              <Label htmlFor="projectUsername">Username</Label>
+              <Input
+                id="projectUsername"
+                value={username}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                onChange={(event) => setUsername(normalizeUsername(event.target.value))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <p className="font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                Share URL
+              </p>
+              <a
+                href={project.publicPath ?? previewPath}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all font-mono text-xs font-bold text-foreground underline decoration-[2px] underline-offset-4"
+              >
+                {shareUrl}
+              </a>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyShareUrl}
+                  disabled={!project.title.trim() || syncState === "saving"}
+                >
+                  {copied ? <Check /> : <Copy />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+                {project.publicPath && (
+                  <Button type="button" variant="outline" size="sm" asChild>
+                    <a href={project.publicPath} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink />
+                      View
+                    </a>
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {syncState === "saving"
+                  ? "Saving..."
+                  : syncState === "saved"
+                    ? "Saved. This URL is public and shareable."
+                    : syncState === "error"
+                      ? saveError
+                      : "Name the project to create its public page."}
+              </p>
+            </div>
           </div>
 
           <div className="grid gap-2">

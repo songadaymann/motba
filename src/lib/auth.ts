@@ -18,6 +18,7 @@ type UserSessionRow = {
   user_id: string;
   email: string;
   name: string | null;
+  username: string | null;
   created_at: string;
   updated_at: string;
   last_login_at: string | null;
@@ -261,6 +262,7 @@ export async function getSessionFromCookieValue(cookieValue?: string | null) {
        u.id AS user_id,
        u.email,
        u.name,
+       u.username,
        u.created_at,
        u.updated_at,
        u.last_login_at
@@ -282,6 +284,7 @@ export async function getSessionFromCookieValue(cookieValue?: string | null) {
       id: row.user_id,
       email: row.email,
       name: row.name,
+      username: row.username,
       created_at: row.created_at,
       updated_at: row.updated_at,
       last_login_at: row.last_login_at,
