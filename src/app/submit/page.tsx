@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { SubmitForm } from "./submit-form";
+import { getTurnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = {
   title: "Submit an Artist",
   description: "Submit an artist or project for consideration in The Museum of Time Based Art.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function SubmitPage() {
+  const turnstileSiteKey = getTurnstileSiteKey();
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold tracking-tight">Submit an Artist</h1>
@@ -14,7 +19,7 @@ export default function SubmitPage() {
         Send a long-duration or daily-practice artist for review.
       </p>
       <div className="mt-10">
-        <SubmitForm />
+        <SubmitForm turnstileSiteKey={turnstileSiteKey} />
       </div>
     </div>
   );

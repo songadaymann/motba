@@ -7,13 +7,19 @@ import { useMemo, useState } from "react";
 import { HalftoneOverlay } from "@/components/HalftoneOverlay";
 import { CATEGORY_COLORS, type ArtCategory } from "@/lib/constants";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
-import { getFarFutureDuration, isFarFutureWork } from "@/lib/artwork-time";
+import {
+  getArtworkCountMetric,
+  getArtworkYearsDisplay,
+  getFarFutureDuration,
+  isFarFutureWork,
+} from "@/lib/artwork-time";
 
 export interface HomeArtwork {
   id: string;
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: "daily" | "yearly";
   years_display: string | null;
   is_ongoing: boolean;
   description: string | null;
@@ -71,10 +77,7 @@ function getStartDate(artwork: HomeArtwork): Date | null {
 }
 
 function isOngoingWork(artwork: HomeArtwork): boolean {
-  return (
-    artwork.is_ongoing ||
-    artwork.years_display?.toLowerCase().includes("now") === true
-  );
+  return artwork.is_ongoing;
 }
 
 function getEndDate(artwork: HomeArtwork, now: Date): Date | null {
@@ -108,16 +111,6 @@ function getDurationMs(artwork: HomeArtwork, now: Date): number | null {
 
   const diffMs = end.getTime() - start.getTime();
   return diffMs >= 0 ? diffMs : null;
-}
-
-function getDayCountDisplay(artwork: HomeArtwork, now: Date): string | null {
-  const farFutureDuration = getFarFutureDuration(artwork.slug);
-  if (farFutureDuration) return farFutureDuration.daysDisplay;
-
-  const durationMs = getDurationMs(artwork, now);
-  if (durationMs == null) return null;
-
-  return Math.floor(durationMs / DAY_MS).toLocaleString();
 }
 
 function getHeroCopy(description: string | null): string {
@@ -250,6 +243,8 @@ function HeroCarousel({
 
   if (!heroArtwork) return null;
 
+  const yearsDisplay = getArtworkYearsDisplay(heroArtwork);
+
   function moveHero(delta: number) {
     setHeroIndex((current) =>
       (current + delta + heroArtworks.length) % heroArtworks.length
@@ -326,11 +321,11 @@ function HeroCarousel({
                 >
                   {CATEGORY_COLORS[heroArtwork.category].label}
                 </span>
-                {heroArtwork.years_display && (
+                {yearsDisplay && (
                   <span
                     className={`${spaceMonoClassName} text-xs font-bold text-[var(--riso-muted)]`}
                   >
-                    {heroArtwork.years_display}
+                    {yearsDisplay}
                   </span>
                 )}
               </div>
@@ -366,7 +361,8 @@ function WorkListItem({
   spaceMonoClassName: string;
 }) {
   const cat = CATEGORY_COLORS[artwork.category];
-  const days = getDayCountDisplay(artwork, now);
+  const metric = getArtworkCountMetric(artwork, now);
+  const yearsDisplay = getArtworkYearsDisplay(artwork);
 
   return (
     <Link
@@ -392,15 +388,16 @@ function WorkListItem({
           className={`${spaceMonoClassName} text-xs font-bold leading-relaxed text-[var(--riso-muted)]`}
         >
           {artwork.artists.name}
-          {artwork.years_display && ` / ${artwork.years_display}`}
+          {yearsDisplay && ` / ${yearsDisplay}`}
         </p>
       </div>
 
-      {days != null && (
+      {metric && (
         <div className="shrink-0 text-right">
-          <div className="text-base font-black sm:text-lg">{days}</div>
+          <div className="text-base font-black sm:text-lg">{metric.value}</div>
           <div className="text-[10px] font-black tracking-[0.1em] text-[var(--riso-muted)]">
-            DAYS{isPresentWork(artwork, now) ? " +" : ""}
+            {metric.label}
+            {metric.isOngoing ? " +" : ""}
           </div>
         </div>
       )}

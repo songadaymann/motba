@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { CATEGORIES, CATEGORY_COLORS, type ArtCategory } from "@/lib/constants";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
+import { getArtworkYearsDisplay } from "@/lib/artwork-time";
 import type { TimelineEntry } from "@/types/database";
 
 const DAY_MS = 1000 * 60 * 60 * 24;
@@ -280,6 +281,10 @@ function TimelineEventCard({ event }: { event: TimelineEvent }) {
   const tickTop =
     event.side === "top" ? cardTop + EVENT_CARD_HEIGHT : AXIS_Y;
   const dateLabel = getDateLabel(event, event.startDate);
+  const yearsDisplay = getArtworkYearsDisplay({
+    ...event,
+    slug: event.artwork_slug,
+  });
   const artistPhotoUrl = event.artist_photo_cloudinary_id
     ? cloudinaryUrl(event.artist_photo_cloudinary_id, "artist-photo")
     : null;
@@ -341,7 +346,7 @@ function TimelineEventCard({ event }: { event: TimelineEvent }) {
         </p>
         <p className="mt-2 font-mono text-[11px] font-bold leading-relaxed text-current/60">
           {event.artwork_title}
-          {event.years_display ? ` / ${event.years_display}` : ""}
+          {yearsDisplay ? ` / ${yearsDisplay}` : ""}
         </p>
       </Link>
     </div>

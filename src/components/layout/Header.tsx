@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Clock3, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClockO } from "@/components/ClockO";
 import { useState } from "react";
@@ -10,6 +11,7 @@ const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/timeline", label: "Timeline" },
   { href: "/artists", label: "Artists" },
+  { href: "/start", label: "Start" },
   { href: "/submit", label: "Submit" },
   { href: "/account", label: "Account" },
 ];
@@ -37,7 +39,7 @@ export function Header() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-4 md:flex">
+        <nav className="hidden items-center gap-3 md:flex">
           {NAV_LINKS.map((link) => {
             const isActive = pathname === link.href;
             return (
@@ -45,7 +47,7 @@ export function Header() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "text-xs font-black uppercase tracking-[0.1em] transition-colors",
+                  "time-nav-link text-xs font-black uppercase tracking-[0.1em] transition-colors",
                   isActive
                     ? "text-[var(--riso-ink)] underline decoration-[3px] underline-offset-4"
                     : "text-[var(--riso-ink)]/70 hover:text-[var(--riso-ink)]"
@@ -58,33 +60,18 @@ export function Header() {
           })}
         </nav>
 
-        {/* Mobile hamburger */}
+        {/* Mobile timepiece menu */}
         <button
-          className="inline-flex items-center justify-center p-2 text-[var(--riso-ink)] md:hidden"
+          className="time-menu-button inline-flex items-center justify-center p-2 text-[var(--riso-ink)] md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
+          aria-expanded={mobileOpen}
         >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2.5}
-            stroke="currentColor"
-          >
-            {mobileOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            )}
-          </svg>
+          {mobileOpen ? (
+            <X className="size-5" strokeWidth={2.5} />
+          ) : (
+            <Clock3 className="size-5" strokeWidth={2.5} />
+          )}
         </button>
       </div>
 
@@ -99,7 +86,7 @@ export function Header() {
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "block px-3 py-2 text-xs font-black uppercase tracking-[0.1em]",
+                  "time-nav-link block px-3 py-2 text-xs font-black uppercase tracking-[0.1em]",
                   isActive
                     ? "text-[var(--riso-ink)] underline decoration-[3px] underline-offset-4"
                     : "text-[var(--riso-ink)]/70"

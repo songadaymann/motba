@@ -39,6 +39,7 @@
     "ALLOW_LOCAL_ADMIN": "false",
     "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "daasdsuhz",
     "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-f6ad53a541b04e8aa66fe5e0dad12eb8.r2.dev",
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "",
     "NEXTJS_ENV": "production",
     "RESEND_FROM_EMAIL": "MOTBA <noreply@motba.art>"
   },
@@ -73,8 +74,44 @@
         "ALLOW_LOCAL_ADMIN": "false",
         "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "daasdsuhz",
         "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-f6ad53a541b04e8aa66fe5e0dad12eb8.r2.dev",
+        "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "",
         "NEXTJS_ENV": "production",
         "RESEND_FROM_EMAIL": "MOTBA <noreply@motba.art>"
+      }
+    },
+    "test": {
+      "name": "motba-web-test",
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "motba-web-test"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "motba-db-test",
+          "database_id": "5bd2b7d6-d349-4f74-ae0f-ca2d3492cf10",
+          "preview_database_id": "5bd2b7d6-d349-4f74-ae0f-ca2d3492cf10",
+          "migrations_dir": "./migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MOTBA_BUCKET",
+          "bucket_name": "motba"
+        }
+      ],
+      "vars": {
+        "ACCESS_AUD": "",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ADMIN_EMAILS": "jonathan@jonathanmann.net",
+        "ALLOW_LOCAL_ADMIN": "false",
+        "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "daasdsuhz",
+        "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-f6ad53a541b04e8aa66fe5e0dad12eb8.r2.dev",
+        "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+        "NEXTJS_ENV": "production",
+        "RESEND_FROM_EMAIL": "MOTBA Test <noreply@motba.art>"
       }
     }
   }

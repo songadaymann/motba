@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { buildEmailLayout, sendEmail } from "@/lib/email";
 import { createEmailToken, safeNextPath } from "@/lib/auth";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const schema = z.object({
   email: z.string().trim().email(),
   name: z.string().trim().max(120).optional(),
   nextPath: z.string().optional(),
+  turnstileToken: z.string().max(2048).optional(),
 });
 
 function escapeHtml(value: string) {
@@ -22,6 +24,13 @@ export async function POST(request: NextRequest) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+  }
+
+  if (!(await verifyTurnstileToken(parsed.data.turnstileToken, request))) {
+    return NextResponse.json(
+      { error: "Please verify that you are human." },
+      { status: 400 }
+    );
   }
 
   const { rawToken } = await createEmailToken({

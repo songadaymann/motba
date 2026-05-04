@@ -8,9 +8,11 @@ import type {
   ArtworkImage,
   ArtworkLink,
   LinkType,
+  ProjectFrequency,
   TimelineEntry,
   VerificationStatus,
 } from "@/types/database";
+import { getArtworkYearsDisplay } from "@/lib/artwork-time";
 
 type SqlValue = string | number | null;
 
@@ -27,9 +29,16 @@ type ArtworkListing = Pick<
   | "title"
   | "slug"
   | "category"
+  | "project_frequency"
   | "years_display"
   | "is_ongoing"
   | "hero_image_cloudinary_id"
+  | "start_year"
+  | "start_month"
+  | "start_day"
+  | "end_year"
+  | "end_month"
+  | "end_day"
 > & {
   artists: { name: string; slug: string };
 };
@@ -40,6 +49,7 @@ type HomeArtwork = Pick<
   | "title"
   | "slug"
   | "category"
+  | "project_frequency"
   | "years_display"
   | "is_ongoing"
   | "description"
@@ -60,6 +70,7 @@ type ArtistArtwork = Pick<
   | "title"
   | "slug"
   | "category"
+  | "project_frequency"
   | "years_display"
   | "is_ongoing"
   | "description"
@@ -98,6 +109,7 @@ type ArtworkDetail = Pick<
   | "title"
   | "slug"
   | "category"
+  | "project_frequency"
   | "years_display"
   | "start_year"
   | "start_month"
@@ -137,6 +149,7 @@ type AdminArtwork = Pick<
   | "title"
   | "slug"
   | "category"
+  | "project_frequency"
   | "years_display"
   | "start_year"
   | "start_month"
@@ -177,9 +190,16 @@ type ArtworkListingRow = {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency | null;
   years_display: string | null;
   is_ongoing: number | boolean;
   hero_image_cloudinary_id: string | null;
+  start_year: number | null;
+  start_month: number | null;
+  start_day: number | null;
+  end_year: number | null;
+  end_month: number | null;
+  end_day: number | null;
   artist_name: string;
   artist_slug: string;
 };
@@ -189,6 +209,7 @@ type HomeArtworkRow = {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency | null;
   years_display: string | null;
   is_ongoing: number | boolean;
   description: string | null;
@@ -223,6 +244,7 @@ type ArtworkRow = {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency | null;
   years_display: string | null;
   start_year: number | null;
   start_month: number | null;
@@ -365,6 +387,7 @@ function mapArtistRow(row: ArtistRow): Artist {
 function mapArtworkRow(row: ArtworkRow): Artwork {
   return {
     ...row,
+    project_frequency: row.project_frequency === "yearly" ? "yearly" : "daily",
     is_ongoing: normalizeBoolean(row.is_ongoing),
   };
 }
@@ -459,6 +482,7 @@ export async function getHomeArtworks(): Promise<HomeArtwork[]> {
        aw.title,
        aw.slug,
        aw.category,
+       aw.project_frequency,
        aw.years_display,
        aw.is_ongoing,
        aw.description,
@@ -475,23 +499,31 @@ export async function getHomeArtworks(): Promise<HomeArtwork[]> {
      ORDER BY aw.sort_order ASC, aw.created_at ASC, aw.title ASC`
   );
 
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    slug: row.slug,
-    category: row.category,
-    years_display: row.years_display,
-    is_ongoing: normalizeBoolean(row.is_ongoing),
-    description: row.description,
-    hero_image_cloudinary_id: row.hero_image_cloudinary_id,
-    start_year: row.start_year,
-    start_month: row.start_month,
-    start_day: row.start_day,
-    end_year: row.end_year,
-    end_month: row.end_month,
-    end_day: row.end_day,
-    artists: { name: row.artist_name },
-  }));
+  return rows.map((row) => {
+    const isOngoing = normalizeBoolean(row.is_ongoing);
+
+    return {
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      category: row.category,
+      project_frequency: row.project_frequency === "yearly" ? "yearly" : "daily",
+      years_display: getArtworkYearsDisplay({
+        ...row,
+        is_ongoing: isOngoing,
+      }),
+      is_ongoing: isOngoing,
+      description: row.description,
+      hero_image_cloudinary_id: row.hero_image_cloudinary_id,
+      start_year: row.start_year,
+      start_month: row.start_month,
+      start_day: row.start_day,
+      end_year: row.end_year,
+      end_month: row.end_month,
+      end_day: row.end_day,
+      artists: { name: row.artist_name },
+    };
+  });
 }
 
 export async function listArtistsForIndex(
@@ -563,9 +595,16 @@ export async function listArtworksForIndex(
        aw.title,
        aw.slug,
        aw.category,
+       aw.project_frequency,
        aw.years_display,
        aw.is_ongoing,
        aw.hero_image_cloudinary_id,
+       aw.start_year,
+       aw.start_month,
+       aw.start_day,
+       aw.end_year,
+       aw.end_month,
+       aw.end_day,
        a.name AS artist_name,
        a.slug AS artist_slug
      FROM artworks aw
@@ -575,19 +614,33 @@ export async function listArtworksForIndex(
     filterCategory ? [filterCategory] : []
   );
 
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    slug: row.slug,
-    category: row.category,
-    years_display: row.years_display,
-    is_ongoing: normalizeBoolean(row.is_ongoing),
-    hero_image_cloudinary_id: row.hero_image_cloudinary_id,
-    artists: {
-      name: row.artist_name,
-      slug: row.artist_slug,
-    },
-  }));
+  return rows.map((row) => {
+    const isOngoing = normalizeBoolean(row.is_ongoing);
+
+    return {
+      id: row.id,
+      title: row.title,
+      slug: row.slug,
+      category: row.category,
+      project_frequency: row.project_frequency === "yearly" ? "yearly" : "daily",
+      years_display: getArtworkYearsDisplay({
+        ...row,
+        is_ongoing: isOngoing,
+      }),
+      is_ongoing: isOngoing,
+      hero_image_cloudinary_id: row.hero_image_cloudinary_id,
+      start_year: row.start_year,
+      start_month: row.start_month,
+      start_day: row.start_day,
+      end_year: row.end_year,
+      end_month: row.end_month,
+      end_day: row.end_day,
+      artists: {
+        name: row.artist_name,
+        slug: row.artist_slug,
+      },
+    };
+  });
 }
 
 export async function getArtistMetadataBySlug(slug: string) {
@@ -649,7 +702,8 @@ export async function getArtistBySlug(slug: string): Promise<ArtistDetail | null
         title: artwork.title,
         slug: artwork.slug,
         category: artwork.category,
-        years_display: artwork.years_display,
+        project_frequency: artwork.project_frequency,
+        years_display: getArtworkYearsDisplay(artwork),
         is_ongoing: artwork.is_ongoing,
         description: artwork.description,
         hero_image_cloudinary_id: artwork.hero_image_cloudinary_id,
@@ -691,8 +745,13 @@ export async function getArtworkBySlug(slug: string): Promise<ArtworkDetail | nu
   ]);
 
   const artwork = mapArtworkRow(row);
-  return {
+  const normalizedArtwork = {
     ...artwork,
+    years_display: getArtworkYearsDisplay(artwork),
+  };
+
+  return {
+    ...normalizedArtwork,
     artists: {
       id: row.artist_id_join,
       name: row.artist_name,
@@ -714,10 +773,23 @@ export async function listTimelineEntries(): Promise<TimelineEntry[]> {
      ORDER BY computed_start_date ASC, artwork_title ASC`
   );
 
-  return rows.map((row) => ({
-    ...row,
-    is_ongoing: normalizeBoolean(row.is_ongoing),
-  }));
+  return rows.map((row) => {
+    const projectFrequency: ProjectFrequency =
+      row.project_frequency === "yearly" ? "yearly" : "daily";
+    const entry = {
+      ...row,
+      project_frequency: projectFrequency,
+      is_ongoing: normalizeBoolean(row.is_ongoing),
+    };
+
+    return {
+      ...entry,
+      years_display: getArtworkYearsDisplay({
+        ...entry,
+        slug: entry.artwork_slug,
+      }),
+    };
+  });
 }
 
 export async function getAdminCounts(): Promise<CountSummary> {
@@ -928,6 +1000,7 @@ export async function updateArtwork(
       | "artist_id"
       | "title"
       | "category"
+      | "project_frequency"
       | "years_display"
       | "start_year"
       | "start_month"
@@ -950,6 +1023,7 @@ export async function updateArtwork(
     artist_id: updates.artist_id,
     title: updates.title,
     category: updates.category,
+    project_frequency: updates.project_frequency,
     years_display: updates.years_display,
     start_year: updates.start_year,
     start_month: updates.start_month,

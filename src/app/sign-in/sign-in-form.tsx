@@ -6,15 +6,30 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TurnstileField } from "@/components/TurnstileField";
 
 type State = "idle" | "sending" | "sent" | "passkey" | "error";
 
-export function SignInForm({ nextPath }: { nextPath: string }) {
+export function SignInForm({
+  nextPath,
+  turnstileSiteKey,
+}: {
+  nextPath: string;
+  turnstileSiteKey: string;
+}) {
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
   async function sendLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (turnstileSiteKey && !turnstileToken) {
+      setError("Please verify that you are human.");
+      setState("error");
+      return;
+    }
+
     setState("sending");
     setError(null);
 
@@ -26,12 +41,14 @@ export function SignInForm({ nextPath }: { nextPath: string }) {
         email: form.get("email"),
         name: form.get("name"),
         nextPath,
+        turnstileToken,
       }),
     });
 
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
       setError(body?.error || "Could not send the sign-in link.");
+      setTurnstileResetSignal((current) => current + 1);
       setState("error");
       return;
     }
@@ -89,6 +106,12 @@ export function SignInForm({ nextPath }: { nextPath: string }) {
           <Label htmlFor="name">Name</Label>
           <Input id="name" name="name" autoComplete="name" />
         </div>
+        <TurnstileField
+          siteKey={turnstileSiteKey}
+          action="sign-in"
+          resetSignal={turnstileResetSignal}
+          onTokenChange={setTurnstileToken}
+        />
         <Button type="submit" disabled={state === "sending"}>
           <Mail />
           {state === "sending" ? "Sending..." : "Send sign-in link"}

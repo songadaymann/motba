@@ -9,7 +9,12 @@ import {
   toSqlBoolean,
 } from "@/lib/d1-utils";
 import { hashToken, randomToken } from "@/lib/auth";
-import type { ArtCategory, Submission, SubmissionStatus } from "@/types/database";
+import type {
+  ArtCategory,
+  ProjectFrequency,
+  Submission,
+  SubmissionStatus,
+} from "@/types/database";
 
 type SubmissionRow = Omit<Submission, "is_ongoing" | "gallery_image_ids"> & {
   is_ongoing: number | boolean;
@@ -22,19 +27,23 @@ export type PublicSubmissionInput = {
   submitterRelationship?: string | null;
   artistName: string;
   artistWebsite?: string | null;
+  artistPhotoCloudinaryId?: string | null;
   artworkTitle: string;
   category: ArtCategory;
+  projectFrequency?: ProjectFrequency;
   yearsDisplay?: string | null;
   startYear?: number | null;
   endYear?: number | null;
   isOngoing?: boolean;
   description?: string | null;
   externalUrl?: string | null;
+  heroImageCloudinaryId?: string | null;
 };
 
 function mapSubmissionRow(row: SubmissionRow): Submission {
   return {
     ...row,
+    project_frequency: row.project_frequency === "yearly" ? "yearly" : "daily",
     is_ongoing: fromSqlBoolean(row.is_ongoing),
     gallery_image_ids: JSON.parse(row.gallery_image_ids || "[]") as string[],
   };
@@ -54,20 +63,23 @@ export async function createPublicSubmission(input: PublicSubmissionInput) {
        submitter_relationship,
        artist_name,
        artist_website,
+       artist_photo_cloudinary_id,
        artwork_title,
        category,
+       project_frequency,
        years_display,
        start_year,
        end_year,
        is_ongoing,
        description,
        external_url,
+       hero_image_cloudinary_id,
        gallery_image_ids,
        status,
        private_token_hash,
        created_at,
        updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.submitterName.trim(),
@@ -75,14 +87,17 @@ export async function createPublicSubmission(input: PublicSubmissionInput) {
       input.submitterRelationship?.trim() || null,
       input.artistName.trim(),
       input.artistWebsite?.trim() || null,
+      input.artistPhotoCloudinaryId?.trim() || null,
       input.artworkTitle.trim(),
       input.category,
+      input.projectFrequency === "yearly" ? "yearly" : "daily",
       input.yearsDisplay?.trim() || null,
       input.startYear ?? null,
       input.endYear ?? null,
       toSqlBoolean(Boolean(input.isOngoing)),
       input.description?.trim() || null,
       input.externalUrl?.trim() || null,
+      input.heroImageCloudinaryId?.trim() || null,
       "[]",
       "pending" satisfies SubmissionStatus,
       privateTokenHash,

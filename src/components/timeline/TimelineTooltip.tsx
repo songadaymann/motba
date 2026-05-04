@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
+import { getArtworkYearsDisplay } from "@/lib/artwork-time";
 import { getCategoryColor, getCategoryLabel } from "@/lib/timeline/colors";
 import type { ProcessedEntry } from "@/lib/timeline/types";
 
@@ -13,6 +14,10 @@ interface Props {
 export function TimelineTooltip({ entry, position }: Props) {
   const color = getCategoryColor(entry.category);
   const tooltipWidth = 280;
+  const yearsDisplay = getArtworkYearsDisplay({
+    ...entry,
+    slug: entry.artwork_slug,
+  });
 
   // Position near cursor, flip if near right edge
   const left =
@@ -60,8 +65,8 @@ export function TimelineTooltip({ entry, position }: Props) {
           {getCategoryLabel(entry.category)}
         </span>
         <span className="text-xs text-muted-foreground">
-          {entry.years_display ||
-            `${entry.start_year || "?"} – ${entry.is_ongoing ? "ongoing" : entry.end_year || "?"}`}
+          {yearsDisplay ||
+            `${entry.start_year || "?"} - ${entry.is_ongoing ? "ongoing" : entry.end_year || "?"}`}
         </span>
         {entry.isCapped && entry.actualEndYear && (
           <span className="text-xs text-muted-foreground italic">

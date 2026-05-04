@@ -6,8 +6,10 @@ import {
   CATEGORY_COLORS,
   CATEGORIES,
   type ArtCategory,
+  type ProjectFrequency,
 } from "@/lib/constants";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
+import { getArtworkYearsDisplay } from "@/lib/artwork-time";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -23,9 +25,16 @@ interface ArtworkListing {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency;
   years_display: string | null;
   is_ongoing: boolean;
   hero_image_cloudinary_id: string | null;
+  start_year: number | null;
+  start_month: number | null;
+  start_day: number | null;
+  end_year: number | null;
+  end_month: number | null;
+  end_day: number | null;
   artists: { name: string; slug: string };
 }
 
@@ -87,6 +96,7 @@ export default async function ArtworksPage({
           const imgUrl = artwork.hero_image_cloudinary_id
             ? cloudinaryUrl(artwork.hero_image_cloudinary_id, "thumbnail")
             : null;
+          const yearsDisplay = getArtworkYearsDisplay(artwork);
 
           return (
             <Link
@@ -126,9 +136,9 @@ export default async function ArtworksPage({
                 <p className="mt-1 text-sm text-muted-foreground">
                   {artwork.artists.name}
                 </p>
-                {artwork.years_display && (
+                {yearsDisplay && (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {artwork.years_display}
+                    {yearsDisplay}
                     {artwork.is_ongoing && " (ongoing)"}
                   </p>
                 )}

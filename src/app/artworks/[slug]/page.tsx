@@ -2,13 +2,20 @@ import { getArtworkBySlug, getArtworkMetadataBySlug } from "@/lib/d1";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { CATEGORY_COLORS, type ArtCategory } from "@/lib/constants";
+import {
+  CATEGORY_COLORS,
+  type ArtCategory,
+  type ProjectFrequency,
+} from "@/lib/constants";
 import { cloudinaryUrl } from "@/lib/cloudinary/config";
 import { ImageWall } from "@/components/ImageWall";
 import { ClickableGallery } from "@/components/ClickableGallery";
 import { ArtworkLinks } from "@/components/ArtworkLinks";
 import { ExternalEmbed } from "@/components/ExternalEmbed";
-import { getFarFutureDuration } from "@/lib/artwork-time";
+import {
+  getArtworkDurationText,
+  getArtworkYearsDisplay,
+} from "@/lib/artwork-time";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +54,7 @@ interface ArtworkWithArtist {
   title: string;
   slug: string;
   category: ArtCategory;
+  project_frequency: ProjectFrequency;
   years_display: string | null;
   start_year: number | null;
   start_month: number | null;
@@ -83,54 +91,6 @@ interface ArtworkWithArtist {
     embed_id: string | null;
     sort_order: number;
   }[];
-}
-
-function getDurationText(artwork: ArtworkWithArtist): string | null {
-  const farFutureDuration = getFarFutureDuration(artwork.slug);
-  if (farFutureDuration) {
-    return `${farFutureDuration.daysDisplay} days (${farFutureDuration.yearsDisplay})`;
-  }
-
-  if (!artwork.start_year || !artwork.start_month || !artwork.start_day) return null;
-
-  const start = new Date(artwork.start_year, artwork.start_month - 1, artwork.start_day);
-  let end: Date;
-
-  if (!artwork.end_year) {
-    end = new Date();
-  } else if (artwork.end_month && artwork.end_day) {
-    end = new Date(artwork.end_year, artwork.end_month - 1, artwork.end_day);
-  } else if (artwork.end_year) {
-    end = new Date(artwork.end_year, 11, 31);
-  } else {
-    return null;
-  }
-
-  const diffMs = end.getTime() - start.getTime();
-  if (diffMs < 0) return null;
-
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const years =
-    artwork.end_year &&
-    artwork.start_month === 1 &&
-    artwork.start_day === 1 &&
-    artwork.end_month === 1 &&
-    artwork.end_day === 1
-      ? artwork.end_year - artwork.start_year
-      : Math.floor(days / 365.25);
-  const formattedDays = days.toLocaleString();
-
-  if (artwork.is_ongoing && !artwork.end_year) {
-    if (years >= 2) {
-      return `${formattedDays} days and counting (${years} years)`;
-    }
-    return `${formattedDays} days and counting`;
-  } else {
-    if (years >= 2) {
-      return `${formattedDays} days (${years} years)`;
-    }
-    return `${formattedDays} days`;
-  }
 }
 
 export async function generateMetadata({
@@ -170,6 +130,8 @@ export default async function ArtworkPage({
     (a, b) => a.sort_order - b.sort_order
   );
   const categoryColor = CATEGORY_COLORS[typedArtwork.category];
+  const yearsDisplay = getArtworkYearsDisplay(typedArtwork);
+  const duration = getArtworkDurationText(typedArtwork);
 
   // Server-side: check if external_url is embeddable
   const embeddable = typedArtwork.external_url
@@ -248,9 +210,9 @@ export default async function ArtworkPage({
           </Link>
 
           {/* Years */}
-          {typedArtwork.years_display && (
+          {yearsDisplay && (
             <p className="mt-3 text-lg text-muted-foreground">
-              {typedArtwork.years_display}
+              {yearsDisplay}
               {typedArtwork.is_ongoing && (
                 <span className="ml-2 inline-flex items-center gap-1 text-sm">
                   <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
@@ -259,14 +221,11 @@ export default async function ArtworkPage({
               )}
             </p>
           )}
-          {(() => {
-            const duration = getDurationText(typedArtwork);
-            return duration ? (
-              <p className="mt-1 text-lg font-medium" style={{ color: categoryColor.bg }}>
-                {duration}
-              </p>
-            ) : null;
-          })()}
+          {duration && (
+            <p className="mt-1 text-lg font-medium" style={{ color: categoryColor.bg }}>
+              {duration}
+            </p>
+          )}
         </div>
 
         {/* Description */}
