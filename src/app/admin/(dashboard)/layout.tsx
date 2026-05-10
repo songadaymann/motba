@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/admin/images", label: "Images" },
   { href: "/admin/links", label: "Links" },
   { href: "/admin/socials", label: "Socials" },
+  { href: "/admin/claims", label: "Claims" },
 ];
 
 export default function AdminDashboardLayout({

@@ -4,6 +4,9 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type {
   ArtCategory,
   Artist,
+  ArtistMembership,
+  ArtistMembershipRole,
+  ArtistMembershipStatus,
   ArtistSocialLink,
   Artwork,
   ArtworkImage,
@@ -11,6 +14,7 @@ import type {
   LinkType,
   ProjectFrequency,
   TimelineEntry,
+  User,
   VerificationStatus,
 } from "@/types/database";
 import { getArtworkYearsDisplay } from "@/lib/artwork-time";
@@ -143,6 +147,16 @@ type ArtworkOption = {
   slug: string;
   category: ArtCategory;
   artistName: string;
+};
+
+type UserOption = Pick<User, "id" | "email" | "name" | "username">;
+
+export type AdminArtistMembership = ArtistMembership & {
+  artist_name: string;
+  artist_slug: string;
+  user_email: string | null;
+  user_name: string | null;
+  user_username: string | null;
 };
 
 type AdminArtwork = Pick<
@@ -301,6 +315,30 @@ type ArtistSocialLinkRow = {
   created_at: string;
 };
 
+type ArtistMembershipRow = {
+  id: string;
+  user_id: string | null;
+  artist_id: string;
+  role: ArtistMembershipRole;
+  status: ArtistMembershipStatus;
+  invited_email: string | null;
+  invited_by_email: string | null;
+  invite_token_hash: string | null;
+  invited_at: string | null;
+  accepted_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type AdminArtistMembershipRow = ArtistMembershipRow & {
+  artist_name: string;
+  artist_slug: string;
+  user_email: string | null;
+  user_name: string | null;
+  user_username: string | null;
+};
+
 type ArtworkWithArtistRow = ArtworkRow & {
   artist_name: string;
   artist_slug: string;
@@ -416,6 +454,30 @@ function mapArtworkLinkRow(row: ArtworkLinkRow): ArtworkLink {
 
 function mapArtistSocialLinkRow(row: ArtistSocialLinkRow): ArtistSocialLink {
   return row;
+}
+
+function mapAdminArtistMembershipRow(
+  row: AdminArtistMembershipRow
+): AdminArtistMembership {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    artist_id: row.artist_id,
+    role: row.role,
+    status: row.status,
+    invited_email: row.invited_email,
+    invited_by_email: row.invited_by_email,
+    invited_at: row.invited_at,
+    accepted_at: row.accepted_at,
+    revoked_at: row.revoked_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    artist_name: row.artist_name,
+    artist_slug: row.artist_slug,
+    user_email: row.user_email,
+    user_name: row.user_name,
+    user_username: row.user_username,
+  };
 }
 
 async function getArtistRowById(id: string): Promise<Artist | null> {
@@ -907,6 +969,49 @@ export async function listArtistOptions() {
   );
 }
 
+export async function listUserOptions(): Promise<UserOption[]> {
+  return all<UserOption>(
+    `SELECT id, email, name, username
+     FROM users
+     ORDER BY COALESCE(last_login_at, created_at) DESC, email ASC`
+  );
+}
+
+export async function getUserOptionByEmail(email: string): Promise<UserOption | null> {
+  return first<UserOption>(
+    `SELECT id, email, name, username
+     FROM users
+     WHERE email = ?
+     LIMIT 1`,
+    [email.trim().toLowerCase()]
+  );
+}
+
+export async function listAdminArtistMemberships(): Promise<AdminArtistMembership[]> {
+  const rows = await all<AdminArtistMembershipRow>(
+    `SELECT
+       am.*,
+       a.name AS artist_name,
+       a.slug AS artist_slug,
+       u.email AS user_email,
+       u.name AS user_name,
+       u.username AS user_username
+     FROM artist_memberships am
+     JOIN artists a ON a.id = am.artist_id
+     LEFT JOIN users u ON u.id = am.user_id
+     ORDER BY
+       CASE am.status
+         WHEN 'active' THEN 0
+         WHEN 'invited' THEN 1
+         ELSE 2
+       END,
+       a.name ASC,
+       u.email ASC,
+       am.created_at DESC`
+  );
+  return rows.map(mapAdminArtistMembershipRow);
+}
+
 export async function listArtworkImages(artworkId: string): Promise<ArtworkImage[]> {
   const rows = await all<ArtworkImageRow>(
     `SELECT *
@@ -1270,6 +1375,143 @@ export async function updateArtworkLink(
 
 export async function deleteArtworkLink(id: string) {
   await run("DELETE FROM artwork_links WHERE id = ?", [id]);
+}
+
+async function getAdminArtistMembershipById(
+  id: string
+): Promise<AdminArtistMembership | null> {
+  const row = await first<AdminArtistMembershipRow>(
+    `SELECT
+       am.*,
+       a.name AS artist_name,
+       a.slug AS artist_slug,
+       u.email AS user_email,
+       u.name AS user_name,
+       u.username AS user_username
+     FROM artist_memberships am
+     JOIN artists a ON a.id = am.artist_id
+     LEFT JOIN users u ON u.id = am.user_id
+     WHERE am.id = ?
+     LIMIT 1`,
+    [id]
+  );
+
+  return row ? mapAdminArtistMembershipRow(row) : null;
+}
+
+export async function createArtistMembership(input: {
+  artist_id: string;
+  user_id: string;
+  role: ArtistMembershipRole;
+  invited_by_email?: string | null;
+}): Promise<AdminArtistMembership> {
+  const timestamp = nowIso();
+  const existing = await first<Pick<ArtistMembership, "id">>(
+    `SELECT id
+     FROM artist_memberships
+     WHERE artist_id = ?
+       AND user_id = ?
+     ORDER BY
+       CASE status
+         WHEN 'active' THEN 0
+         WHEN 'invited' THEN 1
+         ELSE 2
+       END,
+       created_at ASC
+     LIMIT 1`,
+    [input.artist_id, input.user_id]
+  );
+
+  if (existing) {
+    await run(
+      `UPDATE artist_memberships
+       SET role = ?,
+           status = 'active',
+           accepted_at = COALESCE(accepted_at, ?),
+           revoked_at = NULL,
+           invited_by_email = COALESCE(invited_by_email, ?)
+       WHERE id = ?`,
+      [input.role, timestamp, input.invited_by_email ?? null, existing.id]
+    );
+
+    const membership = await getAdminArtistMembershipById(existing.id);
+    if (!membership) throw new Error("Artist membership not found after update");
+    return membership;
+  }
+
+  const id = crypto.randomUUID();
+  await run(
+    `INSERT INTO artist_memberships (
+       id,
+       user_id,
+       artist_id,
+       role,
+       status,
+       invited_by_email,
+       accepted_at,
+       created_at,
+       updated_at
+     ) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`,
+    [
+      id,
+      input.user_id,
+      input.artist_id,
+      input.role,
+      input.invited_by_email ?? null,
+      timestamp,
+      timestamp,
+      timestamp,
+    ]
+  );
+
+  const membership = await getAdminArtistMembershipById(id);
+  if (!membership) throw new Error("Failed to create artist membership");
+  return membership;
+}
+
+export async function updateArtistMembership(
+  id: string,
+  updates: Partial<Pick<ArtistMembership, "role" | "status">>
+): Promise<AdminArtistMembership> {
+  const current = await getAdminArtistMembershipById(id);
+  if (!current) throw new Error("Artist membership not found");
+
+  const nextStatus = updates.status ?? current.status;
+  const timestamp = nowIso();
+
+  await run(
+    `UPDATE artist_memberships
+     SET role = COALESCE(?, role),
+         status = COALESCE(?, status),
+         accepted_at = CASE
+           WHEN ? = 'active' THEN COALESCE(accepted_at, ?)
+           ELSE accepted_at
+         END,
+         revoked_at = CASE
+           WHEN ? = 'revoked' THEN COALESCE(revoked_at, ?)
+           WHEN ? = 'active' THEN NULL
+           ELSE revoked_at
+         END
+     WHERE id = ?`,
+    [
+      updates.role ?? null,
+      updates.status ?? null,
+      nextStatus,
+      timestamp,
+      nextStatus,
+      timestamp,
+      nextStatus,
+      id,
+    ]
+  );
+
+  const membership = await getAdminArtistMembershipById(id);
+  if (!membership) throw new Error("Artist membership not found after update");
+  return membership;
+}
+
+export async function deleteArtistMembership(id: string) {
+  await run("DELETE FROM artist_memberships WHERE id = ?", [id]);
 }
 
 export async function createArtistSocialLink(input: {
