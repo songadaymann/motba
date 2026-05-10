@@ -200,6 +200,17 @@ export interface ArtworkLink {
   created_at: string;
 }
 
+export interface ArtistSocialLink {
+  id: string;
+  artist_id: string;
+  url: string;
+  platform: string;
+  handle: string | null;
+  label: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
 // Joined type for artist pages
 export interface ArtistWithArtworks extends Artist {
   artworks: Artwork[];

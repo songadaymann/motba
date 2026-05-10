@@ -11,6 +11,7 @@ import { cloudinaryUrl } from "@/lib/cloudinary/config";
 import { GalleryPreview } from "@/components/GalleryPreview";
 import { ImageWall } from "@/components/ImageWall";
 import { ArtworkLinks } from "@/components/ArtworkLinks";
+import { ArtistSocialLinks } from "@/components/ArtistSocialLinks";
 import {
   getArtworkDurationText,
   getArtworkYearsDisplay,
@@ -36,6 +37,17 @@ interface ArtworkLinkRow {
   platform: string | null;
   embed_id: string | null;
   sort_order: number;
+}
+
+interface ArtistSocialLinkRow {
+  id: string;
+  artist_id: string;
+  url: string;
+  platform: string;
+  handle: string | null;
+  label: string | null;
+  sort_order: number;
+  created_at: string;
 }
 
 interface ArtworkRow {
@@ -70,6 +82,7 @@ interface ArtistRow {
   born_year: number | null;
   died_year: number | null;
   nationality: string | null;
+  artist_social_links: ArtistSocialLinkRow[];
   artworks: ArtworkRow[];
 }
 
@@ -167,6 +180,11 @@ export default async function ArtistPage({
               </a>
             </div>
           )}
+          <ArtistSocialLinks
+            links={[...typedArtist.artist_social_links].sort(
+              (a, b) => a.sort_order - b.sort_order
+            )}
+          />
         </div>
       </div>
 

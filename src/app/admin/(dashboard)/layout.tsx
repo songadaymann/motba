@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/admin/artworks", label: "Artworks" },
   { href: "/admin/images", label: "Images" },
   { href: "/admin/links", label: "Links" },
+  { href: "/admin/socials", label: "Socials" },
 ];
 
 export default function AdminDashboardLayout({

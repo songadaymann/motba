@@ -4,6 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type {
   ArtCategory,
   Artist,
+  ArtistSocialLink,
   Artwork,
   ArtworkImage,
   ArtworkLink,
@@ -101,6 +102,7 @@ type ArtistDetail = Pick<
   | "nationality"
 > & {
   artworks: ArtistArtwork[];
+  artist_social_links: ArtistSocialLink[];
 };
 
 type ArtworkDetail = Pick<
@@ -287,6 +289,17 @@ type ArtworkLinkRow = {
   created_at: string;
 };
 
+type ArtistSocialLinkRow = {
+  id: string;
+  artist_id: string;
+  url: string;
+  platform: string;
+  handle: string | null;
+  label: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
 type ArtworkWithArtistRow = ArtworkRow & {
   artist_name: string;
   artist_slug: string;
@@ -333,7 +346,7 @@ function placeholders(count: number): string {
 }
 
 function buildUpdateStatement(
-  table: "artists" | "artworks" | "artwork_images" | "artwork_links",
+  table: "artists" | "artworks" | "artwork_images" | "artwork_links" | "artist_social_links",
   updates: Record<string, unknown>,
   id: string
 ) {
@@ -397,6 +410,10 @@ function mapArtworkImageRow(row: ArtworkImageRow): ArtworkImage {
 }
 
 function mapArtworkLinkRow(row: ArtworkLinkRow): ArtworkLink {
+  return row;
+}
+
+function mapArtistSocialLinkRow(row: ArtistSocialLinkRow): ArtistSocialLink {
   return row;
 }
 
@@ -471,6 +488,26 @@ async function listArtworkLinksByArtworkIds(artworkIds: string[]) {
     const list = grouped.get(row.artwork_id) ?? [];
     list.push(mapArtworkLinkRow(row));
     grouped.set(row.artwork_id, list);
+  }
+  return grouped;
+}
+
+async function listArtistSocialLinksByArtistIds(artistIds: string[]) {
+  if (artistIds.length === 0) return new Map<string, ArtistSocialLink[]>();
+
+  const rows = await all<ArtistSocialLinkRow>(
+    `SELECT *
+     FROM artist_social_links
+     WHERE artist_id IN (${placeholders(artistIds.length)})
+     ORDER BY artist_id ASC, sort_order ASC, created_at ASC`,
+    artistIds
+  );
+
+  const grouped = new Map<string, ArtistSocialLink[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.artist_id) ?? [];
+    list.push(mapArtistSocialLinkRow(row));
+    grouped.set(row.artist_id, list);
   }
   return grouped;
 }
@@ -680,7 +717,8 @@ export async function getArtistBySlug(slug: string): Promise<ArtistDetail | null
   );
 
   const artworkIds = artworkRows.map((row) => row.id);
-  const [imagesByArtworkId, linksByArtworkId] = await Promise.all([
+  const [socialLinksByArtistId, imagesByArtworkId, linksByArtworkId] = await Promise.all([
+    listArtistSocialLinksByArtistIds([artistRow.id]),
     listArtworkImagesByArtworkIds(artworkIds),
     listArtworkLinksByArtworkIds(artworkIds),
   ]);
@@ -695,6 +733,7 @@ export async function getArtistBySlug(slug: string): Promise<ArtistDetail | null
     born_year: artistRow.born_year,
     died_year: artistRow.died_year,
     nationality: artistRow.nationality,
+    artist_social_links: socialLinksByArtistId.get(artistRow.id) ?? [],
     artworks: artworkRows.map((row) => {
       const artwork = mapArtworkRow(row);
       return {
@@ -860,8 +899,8 @@ export async function listArtworkOptions(): Promise<ArtworkOption[]> {
 }
 
 export async function listArtistOptions() {
-  return all<Pick<Artist, "id" | "name">>(
-    "SELECT id, name FROM artists ORDER BY name ASC"
+  return all<Pick<Artist, "id" | "name" | "slug">>(
+    "SELECT id, name, slug FROM artists ORDER BY name ASC"
   );
 }
 
@@ -885,6 +924,17 @@ export async function listArtworkLinks(artworkId: string): Promise<ArtworkLink[]
     [artworkId]
   );
   return rows.map(mapArtworkLinkRow);
+}
+
+export async function listArtistSocialLinks(artistId: string): Promise<ArtistSocialLink[]> {
+  const rows = await all<ArtistSocialLinkRow>(
+    `SELECT *
+     FROM artist_social_links
+     WHERE artist_id = ?
+     ORDER BY sort_order ASC, created_at ASC`,
+    [artistId]
+  );
+  return rows.map(mapArtistSocialLinkRow);
 }
 
 export async function createArtist(name: string): Promise<Artist> {
@@ -1217,4 +1267,86 @@ export async function updateArtworkLink(
 
 export async function deleteArtworkLink(id: string) {
   await run("DELETE FROM artwork_links WHERE id = ?", [id]);
+}
+
+export async function createArtistSocialLink(input: {
+  artist_id: string;
+  url: string;
+  platform: string;
+  handle?: string | null;
+  label?: string | null;
+}): Promise<ArtistSocialLink> {
+  const maxSort = await first<{ max_sort_order: number | null }>(
+    "SELECT MAX(sort_order) AS max_sort_order FROM artist_social_links WHERE artist_id = ?",
+    [input.artist_id]
+  );
+  const sortOrder = (maxSort?.max_sort_order ?? -1) + 1;
+  const id = crypto.randomUUID();
+
+  await run(
+    `INSERT INTO artist_social_links (
+       id,
+       artist_id,
+       url,
+       platform,
+       handle,
+       label,
+       sort_order,
+       created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.artist_id,
+      input.url,
+      input.platform,
+      input.handle ?? null,
+      input.label ?? null,
+      sortOrder,
+      nowIso(),
+    ]
+  );
+
+  const link = await first<ArtistSocialLinkRow>(
+    "SELECT * FROM artist_social_links WHERE id = ?",
+    [id]
+  );
+  if (!link) throw new Error("Failed to create artist social link");
+  return mapArtistSocialLinkRow(link);
+}
+
+export async function updateArtistSocialLink(
+  id: string,
+  updates: Partial<
+    Pick<
+      ArtistSocialLink,
+      "url" | "platform" | "handle" | "label" | "sort_order"
+    >
+  >
+): Promise<ArtistSocialLink> {
+  const statement = buildUpdateStatement(
+    "artist_social_links",
+    {
+      url: updates.url,
+      platform: updates.platform,
+      handle: updates.handle,
+      label: updates.label,
+      sort_order: updates.sort_order,
+    },
+    id
+  );
+
+  if (statement) {
+    await run(statement.sql, statement.bindings);
+  }
+
+  const link = await first<ArtistSocialLinkRow>(
+    "SELECT * FROM artist_social_links WHERE id = ?",
+    [id]
+  );
+  if (!link) throw new Error("Artist social link not found");
+  return mapArtistSocialLinkRow(link);
+}
+
+export async function deleteArtistSocialLink(id: string) {
+  await run("DELETE FROM artist_social_links WHERE id = ?", [id]);
 }
