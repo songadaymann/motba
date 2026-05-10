@@ -131,6 +131,7 @@ type ArtworkDetail = Pick<
     slug: string;
     artist_photo_cloudinary_id: string | null;
     website_url: string | null;
+    artist_social_links: ArtistSocialLink[];
   };
   artwork_images: ArtworkImage[];
   artwork_links: ArtworkLink[];
@@ -778,7 +779,8 @@ export async function getArtworkBySlug(slug: string): Promise<ArtworkDetail | nu
 
   if (!row) return null;
 
-  const [images, links] = await Promise.all([
+  const [socialLinksByArtistId, images, links] = await Promise.all([
+    listArtistSocialLinksByArtistIds([row.artist_id_join]),
     listArtworkImages(row.id),
     listArtworkLinks(row.id),
   ]);
@@ -797,6 +799,7 @@ export async function getArtworkBySlug(slug: string): Promise<ArtworkDetail | nu
       slug: row.artist_slug,
       artist_photo_cloudinary_id: row.artist_photo_cloudinary_id,
       website_url: row.artist_website_url,
+      artist_social_links: socialLinksByArtistId.get(row.artist_id_join) ?? [],
     },
     artwork_images: images,
     artwork_links: links,

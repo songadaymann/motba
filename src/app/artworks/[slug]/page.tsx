@@ -11,6 +11,7 @@ import { cloudinaryUrl } from "@/lib/cloudinary/config";
 import { ImageWall } from "@/components/ImageWall";
 import { ClickableGallery } from "@/components/ClickableGallery";
 import { ArtworkLinks } from "@/components/ArtworkLinks";
+import { ArtistSocialLinks } from "@/components/ArtistSocialLinks";
 import { ExternalEmbed } from "@/components/ExternalEmbed";
 import {
   getArtworkDurationText,
@@ -73,6 +74,16 @@ interface ArtworkWithArtist {
     slug: string;
     artist_photo_cloudinary_id: string | null;
     website_url: string | null;
+    artist_social_links: {
+      id: string;
+      artist_id: string;
+      url: string;
+      platform: string;
+      handle: string | null;
+      label: string | null;
+      sort_order: number;
+      created_at: string;
+    }[];
   };
   artwork_images: {
     id: string;
@@ -208,6 +219,11 @@ export default async function ArtworkPage({
             )}
             <span className="text-sm font-medium">{artist.name}</span>
           </Link>
+          <ArtistSocialLinks
+            links={[...artist.artist_social_links].sort(
+              (a, b) => a.sort_order - b.sort_order
+            )}
+          />
 
           {/* Years */}
           {yearsDisplay && (
