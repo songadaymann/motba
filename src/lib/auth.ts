@@ -165,18 +165,22 @@ export async function createEmailToken(input: {
 
 export async function consumeEmailToken(
   rawToken: string,
-  purpose?: EmailTokenPurpose
+  purpose?: EmailTokenPurpose | EmailTokenPurpose[]
 ): Promise<ConsumedEmailToken | null> {
   const tokenHash = await hashToken(rawToken);
+  const purposes = Array.isArray(purpose) ? purpose : purpose ? [purpose] : [];
+  const purposeClause = purposes.length
+    ? `AND purpose IN (${purposes.map(() => "?").join(", ")})`
+    : "";
   const row = await first<EmailTokenRow>(
     `SELECT *
      FROM email_tokens
      WHERE token_hash = ?
        AND consumed_at IS NULL
        AND expires_at > ?
-       ${purpose ? "AND purpose = ?" : ""}
+       ${purposeClause}
      LIMIT 1`,
-    purpose ? [tokenHash, nowIso(), purpose] : [tokenHash, nowIso()]
+    purposes.length ? [tokenHash, nowIso(), ...purposes] : [tokenHash, nowIso()]
   );
 
   if (!row) return null;

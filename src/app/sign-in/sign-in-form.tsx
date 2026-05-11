@@ -12,9 +12,11 @@ type State = "idle" | "sending" | "sent" | "passkey" | "error";
 
 export function SignInForm({
   nextPath,
+  turnstileRequired,
   turnstileSiteKey,
 }: {
   nextPath: string;
+  turnstileRequired: boolean;
   turnstileSiteKey: string;
 }) {
   const [state, setState] = useState<State>("idle");
@@ -24,6 +26,11 @@ export function SignInForm({
 
   async function sendLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (turnstileRequired && !turnstileSiteKey) {
+      setError("Human verification is not configured yet.");
+      setState("error");
+      return;
+    }
     if (turnstileSiteKey && !turnstileToken) {
       setError("Please verify that you are human.");
       setState("error");
@@ -112,7 +119,15 @@ export function SignInForm({
           resetSignal={turnstileResetSignal}
           onTokenChange={setTurnstileToken}
         />
-        <Button type="submit" disabled={state === "sending"}>
+        {turnstileRequired && !turnstileSiteKey && (
+          <p className="border border-destructive p-3 text-sm text-destructive">
+            Human verification is not configured yet.
+          </p>
+        )}
+        <Button
+          type="submit"
+          disabled={state === "sending" || (turnstileRequired && !turnstileSiteKey)}
+        >
           <Mail />
           {state === "sending" ? "Sending..." : "Send sign-in link"}
         </Button>

@@ -9,6 +9,7 @@ import type {
   ArtistMembershipStatus,
   ArtistSocialLink,
   Artwork,
+  DeepZoomGallery,
   ArtworkImage,
   ArtworkLink,
   LinkType,
@@ -91,6 +92,7 @@ type ArtistArtwork = Pick<
 > & {
   artwork_images: ArtworkImage[];
   artwork_links: ArtworkLink[];
+  deep_zoom_galleries: DeepZoomGallery[];
 };
 
 type ArtistDetail = Pick<
@@ -107,6 +109,7 @@ type ArtistDetail = Pick<
 > & {
   artworks: ArtistArtwork[];
   artist_social_links: ArtistSocialLink[];
+  deep_zoom_galleries: DeepZoomGallery[];
 };
 
 type ArtworkDetail = Pick<
@@ -139,6 +142,7 @@ type ArtworkDetail = Pick<
   };
   artwork_images: ArtworkImage[];
   artwork_links: ArtworkLink[];
+  deep_zoom_galleries: DeepZoomGallery[];
 };
 
 type ArtworkOption = {
@@ -157,6 +161,26 @@ export type AdminArtistMembership = ArtistMembership & {
   user_email: string | null;
   user_name: string | null;
   user_username: string | null;
+};
+
+export type ManagedArtistArtwork = Pick<
+  Artwork,
+  | "id"
+  | "title"
+  | "slug"
+  | "category"
+  | "project_frequency"
+  | "description"
+  | "external_url"
+  | "hero_image_cloudinary_id"
+  | "status"
+  | "sort_order"
+>;
+
+export type ManagedArtistProfile = Artist & {
+  membership: Pick<ArtistMembership, "id" | "role" | "status">;
+  artist_social_links: ArtistSocialLink[];
+  artworks: ManagedArtistArtwork[];
 };
 
 type AdminArtwork = Pick<
@@ -315,6 +339,10 @@ type ArtistSocialLinkRow = {
   created_at: string;
 };
 
+type DeepZoomGalleryRow = Omit<DeepZoomGallery, "is_active"> & {
+  is_active: number | boolean;
+};
+
 type ArtistMembershipRow = {
   id: string;
   user_id: string | null;
@@ -337,6 +365,12 @@ type AdminArtistMembershipRow = ArtistMembershipRow & {
   user_email: string | null;
   user_name: string | null;
   user_username: string | null;
+};
+
+type ManagedArtistRow = ArtistRow & {
+  membership_id: string;
+  membership_role: ArtistMembershipRole;
+  membership_status: ArtistMembershipStatus;
 };
 
 type ArtworkWithArtistRow = ArtworkRow & {
@@ -456,6 +490,13 @@ function mapArtistSocialLinkRow(row: ArtistSocialLinkRow): ArtistSocialLink {
   return row;
 }
 
+function mapDeepZoomGalleryRow(row: DeepZoomGalleryRow): DeepZoomGallery {
+  return {
+    ...row,
+    is_active: normalizeBoolean(row.is_active),
+  };
+}
+
 function mapAdminArtistMembershipRow(
   row: AdminArtistMembershipRow
 ): AdminArtistMembership {
@@ -571,6 +612,49 @@ async function listArtistSocialLinksByArtistIds(artistIds: string[]) {
     const list = grouped.get(row.artist_id) ?? [];
     list.push(mapArtistSocialLinkRow(row));
     grouped.set(row.artist_id, list);
+  }
+  return grouped;
+}
+
+async function listDeepZoomGalleriesByArtistIds(artistIds: string[]) {
+  if (artistIds.length === 0) return new Map<string, DeepZoomGallery[]>();
+
+  const rows = await all<DeepZoomGalleryRow>(
+    `SELECT *
+     FROM deep_zoom_galleries
+     WHERE artist_id IN (${placeholders(artistIds.length)})
+       AND is_active = 1
+     ORDER BY artist_id ASC, sort_order ASC, generated_at DESC`,
+    artistIds
+  );
+
+  const grouped = new Map<string, DeepZoomGallery[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.artist_id) ?? [];
+    list.push(mapDeepZoomGalleryRow(row));
+    grouped.set(row.artist_id, list);
+  }
+  return grouped;
+}
+
+async function listDeepZoomGalleriesByArtworkIds(artworkIds: string[]) {
+  if (artworkIds.length === 0) return new Map<string, DeepZoomGallery[]>();
+
+  const rows = await all<DeepZoomGalleryRow>(
+    `SELECT *
+     FROM deep_zoom_galleries
+     WHERE artwork_id IN (${placeholders(artworkIds.length)})
+       AND is_active = 1
+     ORDER BY artwork_id ASC, sort_order ASC, generated_at DESC`,
+    artworkIds
+  );
+
+  const grouped = new Map<string, DeepZoomGallery[]>();
+  for (const row of rows) {
+    if (!row.artwork_id) continue;
+    const list = grouped.get(row.artwork_id) ?? [];
+    list.push(mapDeepZoomGalleryRow(row));
+    grouped.set(row.artwork_id, list);
   }
   return grouped;
 }
@@ -780,11 +864,28 @@ export async function getArtistBySlug(slug: string): Promise<ArtistDetail | null
   );
 
   const artworkIds = artworkRows.map((row) => row.id);
-  const [socialLinksByArtistId, imagesByArtworkId, linksByArtworkId] = await Promise.all([
+  const [
+    socialLinksByArtistId,
+    linksByArtworkId,
+    galleriesByArtistId,
+    galleriesByArtworkId,
+  ] = await Promise.all([
     listArtistSocialLinksByArtistIds([artistRow.id]),
-    listArtworkImagesByArtworkIds(artworkIds),
     listArtworkLinksByArtworkIds(artworkIds),
+    listDeepZoomGalleriesByArtistIds([artistRow.id]),
+    listDeepZoomGalleriesByArtworkIds(artworkIds),
   ]);
+  const artistLevelGalleries = galleriesByArtistId.get(artistRow.id) ?? [];
+  const artworkIdsWithoutDeepZoom = artworkIds.filter((artworkId) => {
+    const artworkGalleries = galleriesByArtworkId.get(artworkId) ?? [];
+    const hasArtistLevelGallery =
+      artworkRows.length === 1 &&
+      artistLevelGalleries.some((gallery) => !gallery.artwork_id);
+    return artworkGalleries.length === 0 && !hasArtistLevelGallery;
+  });
+  const imagesByArtworkId = await listArtworkImagesByArtworkIds(
+    artworkIdsWithoutDeepZoom
+  );
 
   return {
     id: artistRow.id,
@@ -797,6 +898,7 @@ export async function getArtistBySlug(slug: string): Promise<ArtistDetail | null
     died_year: artistRow.died_year,
     nationality: artistRow.nationality,
     artist_social_links: socialLinksByArtistId.get(artistRow.id) ?? [],
+    deep_zoom_galleries: artistLevelGalleries,
     artworks: artworkRows.map((row) => {
       const artwork = mapArtworkRow(row);
       return {
@@ -819,6 +921,7 @@ export async function getArtistBySlug(slug: string): Promise<ArtistDetail | null
         end_day: artwork.end_day,
         artwork_images: imagesByArtworkId.get(artwork.id) ?? [],
         artwork_links: linksByArtworkId.get(artwork.id) ?? [],
+        deep_zoom_galleries: galleriesByArtworkId.get(artwork.id) ?? [],
       };
     }),
   };
@@ -841,11 +944,14 @@ export async function getArtworkBySlug(slug: string): Promise<ArtworkDetail | nu
 
   if (!row) return null;
 
-  const [socialLinksByArtistId, images, links] = await Promise.all([
+  const [socialLinksByArtistId, links, deepZoomGalleries] = await Promise.all([
     listArtistSocialLinksByArtistIds([row.artist_id_join]),
-    listArtworkImages(row.id),
     listArtworkLinks(row.id),
+    listDeepZoomGalleriesByArtworkIds([row.id]),
   ]);
+  const activeDeepZoomGalleries = deepZoomGalleries.get(row.id) ?? [];
+  const images =
+    activeDeepZoomGalleries.length > 0 ? [] : await listArtworkImages(row.id);
 
   const artwork = mapArtworkRow(row);
   const normalizedArtwork = {
@@ -865,6 +971,7 @@ export async function getArtworkBySlug(slug: string): Promise<ArtworkDetail | nu
     },
     artwork_images: images,
     artwork_links: links,
+    deep_zoom_galleries: activeDeepZoomGalleries,
   };
 }
 
@@ -1010,6 +1117,103 @@ export async function listAdminArtistMemberships(): Promise<AdminArtistMembershi
        am.created_at DESC`
   );
   return rows.map(mapAdminArtistMembershipRow);
+}
+
+export async function listManagedArtistProfilesForUser(
+  userId: string
+): Promise<ManagedArtistProfile[]> {
+  const rows = await all<ManagedArtistRow>(
+    `SELECT
+       a.*,
+       am.id AS membership_id,
+       am.role AS membership_role,
+       am.status AS membership_status
+     FROM artist_memberships am
+     JOIN artists a ON a.id = am.artist_id
+     WHERE am.user_id = ?
+       AND am.status = 'active'
+     ORDER BY a.name ASC`,
+    [userId]
+  );
+
+  const artistIds = rows.map((row) => row.id);
+  const [socialLinksByArtistId, artworkRows] = await Promise.all([
+    listArtistSocialLinksByArtistIds(artistIds),
+    artistIds.length
+      ? all<ArtworkRow>(
+          `SELECT *
+           FROM artworks
+           WHERE artist_id IN (${placeholders(artistIds.length)})
+           ORDER BY artist_id ASC, sort_order ASC, COALESCE(start_year, 999999) ASC, title ASC`,
+          artistIds
+        )
+      : Promise.resolve([]),
+  ]);
+
+  const artworksByArtistId = new Map<string, ManagedArtistArtwork[]>();
+  for (const row of artworkRows) {
+    const artwork = mapArtworkRow(row);
+    const list = artworksByArtistId.get(artwork.artist_id) ?? [];
+    list.push({
+      id: artwork.id,
+      title: artwork.title,
+      slug: artwork.slug,
+      category: artwork.category,
+      project_frequency: artwork.project_frequency,
+      description: artwork.description,
+      external_url: artwork.external_url,
+      hero_image_cloudinary_id: artwork.hero_image_cloudinary_id,
+      status: artwork.status,
+      sort_order: artwork.sort_order,
+    });
+    artworksByArtistId.set(artwork.artist_id, list);
+  }
+
+  return rows.map((row) => ({
+    ...mapArtistRow(row),
+    membership: {
+      id: row.membership_id,
+      role: row.membership_role,
+      status: row.membership_status,
+    },
+    artist_social_links: socialLinksByArtistId.get(row.id) ?? [],
+    artworks: artworksByArtistId.get(row.id) ?? [],
+  }));
+}
+
+export async function getEditableArtistMembership(input: {
+  userId: string;
+  artistId: string;
+}): Promise<Pick<ArtistMembership, "id" | "role" | "status"> | null> {
+  const row = await first<
+    Pick<ArtistMembershipRow, "id" | "role" | "status">
+  >(
+    `SELECT id, role, status
+     FROM artist_memberships
+     WHERE user_id = ?
+       AND artist_id = ?
+       AND status = 'active'
+       AND role IN ('owner', 'representative')
+     LIMIT 1`,
+    [input.userId, input.artistId]
+  );
+
+  return row;
+}
+
+export async function getArtistById(id: string): Promise<Artist | null> {
+  return getArtistRowById(id);
+}
+
+export async function getArtworkForArtist(input: {
+  artworkId: string;
+  artistId: string;
+}): Promise<Artwork | null> {
+  const row = await first<ArtworkRow>(
+    "SELECT * FROM artworks WHERE id = ? AND artist_id = ?",
+    [input.artworkId, input.artistId]
+  );
+  return row ? mapArtworkRow(row) : null;
 }
 
 export async function listArtworkImages(artworkId: string): Promise<ArtworkImage[]> {

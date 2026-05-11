@@ -113,6 +113,28 @@ export interface ArtworkImage {
   created_at: string;
 }
 
+export interface DeepZoomGallery {
+  id: string;
+  artist_id: string;
+  artwork_id: string | null;
+  slug: string;
+  title: string;
+  description: string | null;
+  manifest_key: string;
+  tile_source_key: string;
+  r2_prefix: string;
+  width: number;
+  height: number;
+  tile_size: number;
+  overlap: number;
+  image_count: number;
+  is_active: boolean;
+  sort_order: number;
+  generated_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Submission {
   id: string;
   submitter_user_id: string | null;

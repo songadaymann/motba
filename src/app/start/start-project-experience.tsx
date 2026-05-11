@@ -248,10 +248,12 @@ export function StartProjectExperience({
   initialProject,
   initialUsername,
   siteUrl,
+  userId,
 }: {
   initialProject: SavedStartProject | null;
   initialUsername: string;
   siteUrl: string;
+  userId: string;
 }) {
   const [project, setProject] = useState<SavedProject>(() =>
     initialProject ? projectFromSavedProject(initialProject) : getInitialProject()
@@ -611,6 +613,7 @@ export function StartProjectExperience({
               title="Profile picture"
               note="For the person or collective doing the project."
               uploadSessionId={project.uploadSessionId}
+              userId={userId}
               image={project.profileImage}
               onUpload={updateProjectImage}
               onRemove={() => removeProjectImage("profile")}
@@ -620,6 +623,7 @@ export function StartProjectExperience({
               title="Project image"
               note="A wide image that can represent the project."
               uploadSessionId={project.uploadSessionId}
+              userId={userId}
               image={project.heroImage}
               onUpload={updateProjectImage}
               onRemove={() => removeProjectImage("hero")}
@@ -768,6 +772,7 @@ function ProjectImageUpload({
   title,
   note,
   uploadSessionId,
+  userId,
   image,
   onUpload,
   onRemove,
@@ -776,6 +781,7 @@ function ProjectImageUpload({
   title: string;
   note: string;
   uploadSessionId: string;
+  userId: string;
   image: ProjectImage | null;
   onUpload: (kind: ProjectImageKind, result: UploadResult) => void;
   onRemove: () => void;
@@ -814,7 +820,7 @@ function ProjectImageUpload({
           <CldUploadWidget
             signatureEndpoint="/api/cloudinary/public-sign"
             options={{
-              folder: `motba/start/${uploadSessionId}`,
+              folder: `motba/start/${userId}/${uploadSessionId}`,
               multiple: false,
               maxFiles: 1,
               maxFileSize: 7_000_000,

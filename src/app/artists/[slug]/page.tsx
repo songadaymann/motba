@@ -16,7 +16,9 @@ import {
   getArtworkDurationText,
   getArtworkYearsDisplay,
 } from "@/lib/artwork-time";
+import type { DeepZoomGallery } from "@/types/database";
 import type { Metadata } from "next";
+import type { ComponentType } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +72,7 @@ interface ArtworkRow {
   end_day: number | null;
   artwork_images: ArtworkImage[];
   artwork_links: ArtworkLinkRow[];
+  deep_zoom_galleries: DeepZoomGallery[];
 }
 
 interface ArtistRow {
@@ -83,8 +86,14 @@ interface ArtistRow {
   died_year: number | null;
   nationality: string | null;
   artist_social_links: ArtistSocialLinkRow[];
+  deep_zoom_galleries: DeepZoomGallery[];
   artworks: ArtworkRow[];
 }
+
+type DeepZoomGallerySectionComponent = ComponentType<{
+  galleries: DeepZoomGallery[];
+  heading?: string;
+}>;
 
 export async function generateMetadata({
   params,
@@ -114,6 +123,16 @@ export default async function ArtistPage({
 
   const typedArtist = artist as unknown as ArtistRow;
   const isSingleWork = typedArtist.artworks.length === 1;
+  const singleWorkDeepZoomGalleries = isSingleWork
+    ? getSingleWorkDeepZoomGalleries(
+        typedArtist.artworks[0],
+        typedArtist.deep_zoom_galleries
+      )
+    : [];
+  const DeepZoomGallerySection =
+    singleWorkDeepZoomGalleries.length > 0
+      ? (await import("@/components/DeepZoomGallerySection")).DeepZoomGallerySection
+      : null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
@@ -189,7 +208,11 @@ export default async function ArtistPage({
       </div>
 
       {isSingleWork ? (
-        <SingleWorkView artwork={typedArtist.artworks[0]} />
+        <SingleWorkView
+          artwork={typedArtist.artworks[0]}
+          deepZoomGalleries={singleWorkDeepZoomGalleries}
+          DeepZoomGallerySection={DeepZoomGallerySection}
+        />
       ) : (
         <>
           {/* Multi-work: show Works list */}
@@ -282,13 +305,22 @@ export default async function ArtistPage({
   );
 }
 
-function SingleWorkView({ artwork }: { artwork: ArtworkRow }) {
+function SingleWorkView({
+  artwork,
+  deepZoomGalleries,
+  DeepZoomGallerySection,
+}: {
+  artwork: ArtworkRow;
+  deepZoomGalleries: DeepZoomGallery[];
+  DeepZoomGallerySection: DeepZoomGallerySectionComponent | null;
+}) {
   const categoryColor = CATEGORY_COLORS[artwork.category];
   const yearsDisplay = getArtworkYearsDisplay(artwork);
   const duration = getArtworkDurationText(artwork);
   const images = [...artwork.artwork_images].sort(
     (a, b) => a.sort_order - b.sort_order
   );
+  const showStandardGallery = deepZoomGalleries.length === 0;
   const links = [...(artwork.artwork_links || [])].sort(
     (a, b) => a.sort_order - b.sort_order
   );
@@ -389,8 +421,12 @@ function SingleWorkView({ artwork }: { artwork: ArtworkRow }) {
         </div>
       )}
 
+      {DeepZoomGallerySection && (
+        <DeepZoomGallerySection galleries={deepZoomGalleries} />
+      )}
+
       {/* Image wall for artworks with many images */}
-      {images.length > 20 ? (
+      {showStandardGallery && images.length > 20 ? (
         <div className="mb-8">
           <ImageWall
             images={images}
@@ -398,7 +434,7 @@ function SingleWorkView({ artwork }: { artwork: ArtworkRow }) {
             fallbackAlt={artwork.title}
           />
         </div>
-      ) : images.length > 0 ? (
+      ) : showStandardGallery && images.length > 0 ? (
         /* Standard gallery for fewer images */
         <div className="mb-8">
           <h3 className="mb-4 text-xl font-semibold">Gallery</h3>
@@ -429,4 +465,21 @@ function SingleWorkView({ artwork }: { artwork: ArtworkRow }) {
       )}
     </div>
   );
+}
+
+function getSingleWorkDeepZoomGalleries(
+  artwork: ArtworkRow,
+  artistGalleries: DeepZoomGallery[]
+) {
+  const galleryIds = new Set<string>();
+  return [
+    ...artwork.deep_zoom_galleries,
+    ...artistGalleries.filter(
+      (gallery) => !gallery.artwork_id || gallery.artwork_id === artwork.id
+    ),
+  ].filter((gallery) => {
+    if (galleryIds.has(gallery.id)) return false;
+    galleryIds.add(gallery.id);
+    return true;
+  });
 }

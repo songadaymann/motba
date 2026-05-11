@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://motba.art",
+          "https://www.motba.art",
+          "http://localhost:3000",
+          "http://localhost:3001"
+        ],
+        "methods": [
+          "GET",
+          "HEAD"
+        ],
+        "headers": [
+          "*"
+        ]
+      },
+      "exposeHeaders": [
+        "accept-ranges",
+        "content-length",
+        "content-type",
+        "etag"
+      ],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}

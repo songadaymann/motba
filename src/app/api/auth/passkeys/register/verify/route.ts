@@ -5,6 +5,11 @@ import {
   SESSION_COOKIE,
 } from "@/lib/auth";
 import { verifyPasskeyRegistration } from "@/lib/passkeys";
+import {
+  enforceRateLimit,
+  rateLimitResponse,
+  RateLimitError,
+} from "@/lib/rate-limit";
 
 const schema = z.object({
   challenge: z.string().min(1),
@@ -19,6 +24,18 @@ export async function POST(request: NextRequest) {
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    await enforceRateLimit({
+      action: "passkey-register-verify-user",
+      identifier: session.user.id,
+      limit: 20,
+      windowSeconds: 60 * 60,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitError) return rateLimitResponse(error);
+    throw error;
   }
 
   const parsed = schema.safeParse(await request.json().catch(() => null));

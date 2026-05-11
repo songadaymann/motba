@@ -28,6 +28,8 @@ Required bindings and vars:
 - `NEXT_PUBLIC_R2_PUBLIC_URL`: public R2 base URL
 - `RESEND_API_KEY`: secret used for public sign-in and submission verification email
 - `RESEND_FROM_EMAIL`: public sender string, for example `MOTBA <noreply@motba.art>`
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: public Cloudflare Turnstile site key
+- `TURNSTILE_SECRET_KEY`: secret Cloudflare Turnstile key
 
 `ASSETS` is reserved by OpenNext for static assets, so the existing R2 content bucket is bound as `MOTBA_BUCKET`.
 
@@ -53,6 +55,13 @@ For Resend, verify a sending domain in Resend and Cloudflare DNS, then set `RESE
 ```bash
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put RESEND_API_KEY --env preview
+```
+
+Turnstile is required in production. Set both the public site key in `wrangler.jsonc` and the secret with Wrangler before deploying signup or submission flows:
+
+```bash
+npx wrangler secret put TURNSTILE_SECRET_KEY
+npx wrangler secret put TURNSTILE_SECRET_KEY --env preview
 ```
 
 Passkeys rely on the request hostname as the WebAuthn relying party ID. Localhost works for local testing; production passkeys created on `motba.art` will be scoped to `motba.art`.
@@ -102,6 +111,58 @@ Audit expected R2 images after export:
 ```bash
 npm run images:audit:r2
 ```
+
+Remove duplicate `artwork_images` rows from D1 without deleting source files or R2
+objects:
+
+```bash
+npm run images:dedupe:d1
+npm run images:dedupe:d1 -- --apply
+```
+
+## Deep Zoom Galleries
+
+Large artwork grids are generated locally with libvips, uploaded to R2, and registered in D1. Install the local image tooling once:
+
+```bash
+brew install vips
+```
+
+Generate a gallery without publishing it:
+
+```bash
+npm run dzi:generate -- \
+  --artist bananakin \
+  --artwork bananakin-everydays-bananakin \
+  --source ../images/bananakin/archive \
+  --title "Bananakin Everydays"
+```
+
+Publish the generated DZI files and show the gallery on the site:
+
+```bash
+npm run dzi:generate -- \
+  --artist bananakin \
+  --artwork bananakin-everydays-bananakin \
+  --source ../images/bananakin/archive \
+  --title "Bananakin Everydays" \
+  --slug everydays \
+  --upload \
+  --apply
+```
+
+Re-run the same `--artist` and `--slug` when another year is added. The script overwrites the R2 files at the same prefix and upserts the D1 gallery row.
+
+Cleanup defaults are intentionally aggressive:
+
+- Source images are never deleted.
+- WordPress-style filename variants like `-150x150`, `-300x300`, and `-scaled` are deduped before generation so only the best candidate is included in the gallery. Use `--no-dedupe` to include every file.
+- A lightweight `preview.jpg` is generated next to the DZI tiles so pages can show an immediate visual while OpenSeadragon loads tiles.
+- Generated thumbnails and the large intermediate `mosaic.jpg` are deleted after the DZI tiles and manifest are created.
+- When `--upload` succeeds, the local generated DZI folder is deleted too.
+- Partial generated output is deleted on errors or interrupts.
+
+Use `--clean-output` to delete the local DZI folder after a dry run with no upload. Use `--keep-output`, `--keep-intermediates`, or `--keep-on-error` when you need to inspect generated files locally.
 
 ## Deploy
 

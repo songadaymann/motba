@@ -29,6 +29,13 @@ declare global {
     ALLOW_LOCAL_ADMIN?: string;
     RESEND_API_KEY?: string;
     RESEND_FROM_EMAIL?: string;
+    TURNSTILE_REQUIRED?: string;
+    TURNSTILE_SECRET_KEY?: string;
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?: string;
+    NEXT_PUBLIC_R2_PUBLIC_URL?: string;
+    CLOUDINARY_API_KEY?: string;
+    CLOUDINARY_API_SECRET?: string;
     DB: D1DatabaseLike;
     MOTBA_BUCKET: R2BucketLike;
     NEXTJS_ENV?: string;

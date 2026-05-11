@@ -12,8 +12,19 @@ export function getTurnstileSiteKey() {
   return process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 }
 
+export function isTurnstileRequired() {
+  return (
+    process.env.TURNSTILE_REQUIRED === "true" ||
+    process.env.NEXTJS_ENV === "production"
+  );
+}
+
 export function isTurnstileEnabled() {
-  return Boolean(getTurnstileSiteKey() || process.env.TURNSTILE_SECRET_KEY);
+  return Boolean(
+    getTurnstileSiteKey() ||
+      process.env.TURNSTILE_SECRET_KEY ||
+      isTurnstileRequired()
+  );
 }
 
 export async function verifyTurnstileToken(

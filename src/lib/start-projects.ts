@@ -7,6 +7,11 @@ import {
   slugifyProjectSegment,
   suggestUsername,
 } from "@/lib/project-slugs";
+import {
+  assertCloudinaryIdInFolder,
+  isValidUploadSessionId,
+  startProjectUploadFolder,
+} from "@/lib/cloudinary/uploads";
 import type {
   User,
   UserProjectDuration,
@@ -219,10 +224,28 @@ export async function saveStartProject(user: User, input: SaveStartProjectInput)
   const timestamp = nowIso();
   const uploadSessionId =
     cleanText(input.uploadSessionId, 100) || existingProject?.upload_session_id || projectId;
+  if (!isValidUploadSessionId(uploadSessionId)) {
+    throw new Error("Invalid upload session.");
+  }
   const startDate = assertProjectDate(input.startDate);
   const customPractice = cleanText(input.customPractice, 80) || null;
   const profileImageId = cleanText(input.profileImageCloudinaryId, 300) || null;
   const heroImageId = cleanText(input.heroImageCloudinaryId, 300) || null;
+  const uploadFolder = startProjectUploadFolder(user.id, uploadSessionId);
+  if (profileImageId !== existingProject?.profile_image_cloudinary_id) {
+    assertCloudinaryIdInFolder(
+      profileImageId,
+      uploadFolder,
+      "Invalid profile picture upload."
+    );
+  }
+  if (heroImageId !== existingProject?.hero_image_cloudinary_id) {
+    assertCloudinaryIdInFolder(
+      heroImageId,
+      uploadFolder,
+      "Invalid project image upload."
+    );
+  }
   const entries = input.entries.slice(0, 500).map((entry, index) => ({
     id: cleanText(entry.id, 80) || crypto.randomUUID(),
     url: assertPublicUrl(entry.url),

@@ -37,7 +37,13 @@ function createUploadSessionId() {
     : Math.random().toString(36).slice(2);
 }
 
-export function SubmitForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
+export function SubmitForm({
+  turnstileRequired,
+  turnstileSiteKey,
+}: {
+  turnstileRequired: boolean;
+  turnstileSiteKey: string;
+}) {
   const [state, setState] = useState<SubmitState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [uploadSessionId, setUploadSessionId] = useState(createUploadSessionId);
@@ -65,6 +71,11 @@ export function SubmitForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (turnstileRequired && !turnstileSiteKey) {
+      setError("Human verification is not configured yet.");
+      setState("error");
+      return;
+    }
     if (turnstileSiteKey && !turnstileToken) {
       setError("Please verify that you are human.");
       setState("error");
@@ -81,6 +92,7 @@ export function SubmitForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
       submitterRelationship: form.get("submitterRelationship"),
       artistName: form.get("artistName"),
       artistWebsite: form.get("artistWebsite"),
+      uploadSessionId,
       artistPhotoCloudinaryId: artistImage?.publicId || "",
       artworkTitle: form.get("artworkTitle"),
       category: form.get("category"),
@@ -269,10 +281,19 @@ export function SubmitForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
         resetSignal={turnstileResetSignal}
         onTokenChange={setTurnstileToken}
       />
+      {turnstileRequired && !turnstileSiteKey && (
+        <p className="border border-destructive p-3 text-sm text-destructive">
+          Human verification is not configured yet.
+        </p>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <Button type="submit" className="w-fit" disabled={state === "submitting"}>
+      <Button
+        type="submit"
+        className="w-fit"
+        disabled={state === "submitting" || (turnstileRequired && !turnstileSiteKey)}
+      >
         <Send />
         {state === "submitting" ? "Submitting..." : "Submit"}
       </Button>

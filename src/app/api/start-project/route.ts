@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionFromCookieValue, SESSION_COOKIE } from "@/lib/auth";
+import {
+  enforceRateLimit,
+  rateLimitResponse,
+  RateLimitError,
+} from "@/lib/rate-limit";
 import { saveStartProject } from "@/lib/start-projects";
 
 const projectSchema = z.object({
@@ -36,6 +41,18 @@ export async function PUT(request: Request) {
 
   if (!session) {
     return NextResponse.json({ error: "Sign in to save your project." }, { status: 401 });
+  }
+
+  try {
+    await enforceRateLimit({
+      action: "start-project-save-user",
+      identifier: session.user.id,
+      limit: 600,
+      windowSeconds: 60 * 60,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitError) return rateLimitResponse(error);
+    throw error;
   }
 
   const body = await request.json().catch(() => null);

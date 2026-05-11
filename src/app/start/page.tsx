@@ -22,6 +22,7 @@ export default async function StartPage() {
       initialProject={project}
       initialUsername={session.user.username ?? suggestUsername(session.user)}
       siteUrl={SITE_CONFIG.url}
+      userId={session.user.id}
     />
   );
 }

@@ -4,17 +4,26 @@ import {
   consumeEmailToken,
   createSession,
   getOrCreateUser,
+  type EmailTokenPurpose,
 } from "@/lib/auth";
 import { markSubmissionEmailVerified } from "@/lib/submissions";
 
+const VERIFY_PURPOSES: EmailTokenPurpose[] = ["login", "submission_verification"];
+
 export async function GET(request: NextRequest) {
   const rawToken = request.nextUrl.searchParams.get("token");
+  const purposeParam = request.nextUrl.searchParams.get("purpose");
 
   if (!rawToken) {
     return NextResponse.redirect(new URL("/sign-in?error=missing-token", request.url));
   }
 
-  const token = await consumeEmailToken(rawToken);
+  const purpose = VERIFY_PURPOSES.find((item) => item === purposeParam);
+  if (purposeParam && !purpose) {
+    return NextResponse.redirect(new URL("/sign-in?error=expired-token", request.url));
+  }
+
+  const token = await consumeEmailToken(rawToken, purpose ?? VERIFY_PURPOSES);
   if (!token) {
     return NextResponse.redirect(new URL("/sign-in?error=expired-token", request.url));
   }

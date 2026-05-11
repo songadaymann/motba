@@ -16,6 +16,7 @@ interface ExternalEmbedProps {
  * need full browser capabilities to render correctly.
  */
 export function ExternalEmbed({ url, title }: ExternalEmbedProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
@@ -50,6 +51,31 @@ export function ExternalEmbed({ url, title }: ExternalEmbedProps) {
             />
           </svg>
         </a>
+      </div>
+    );
+  }
+
+  if (!isOpen) {
+    return (
+      <div className="flex min-h-44 flex-col items-center justify-center gap-4 rounded-lg border border-border bg-muted/40 p-8 text-center">
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Load project site
+          </button>
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-medium transition-colors hover:bg-accent"
+          >
+            Open site
+          </a>
+        </div>
       </div>
     );
   }

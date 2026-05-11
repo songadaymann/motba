@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SubmitForm } from "./submit-form";
-import { getTurnstileSiteKey } from "@/lib/turnstile";
+import { getTurnstileSiteKey, isTurnstileRequired } from "@/lib/turnstile";
 
 export const metadata: Metadata = {
   title: "Submit an Artist",
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default function SubmitPage() {
   const turnstileSiteKey = getTurnstileSiteKey();
+  const turnstileRequired = isTurnstileRequired();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -19,7 +20,10 @@ export default function SubmitPage() {
         Send a long-duration or daily-practice artist for review.
       </p>
       <div className="mt-10">
-        <SubmitForm turnstileSiteKey={turnstileSiteKey} />
+        <SubmitForm
+          turnstileRequired={turnstileRequired}
+          turnstileSiteKey={turnstileSiteKey}
+        />
       </div>
     </div>
   );

@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { buildEmailLayout, sendEmail } from "@/lib/email";
 import { createEmailToken } from "@/lib/auth";
+import {
+  assertCloudinaryIdInFolder,
+  isValidUploadSessionId,
+  submissionUploadFolder,
+} from "@/lib/cloudinary/uploads";
+import {
+  enforceRateLimit,
+  getClientIp,
+  rateLimitResponse,
+  RateLimitError,
+} from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import {
   createPublicSubmission,
@@ -16,6 +27,7 @@ const schema = z.object({
   submitterRelationship: z.string().trim().max(160).optional(),
   artistName: z.string().trim().min(1).max(200),
   artistWebsite: z.string().trim().url().max(500).optional().or(z.literal("")),
+  uploadSessionId: z.string().trim().max(100).optional(),
   artistPhotoCloudinaryId: z.string().trim().max(300).optional().or(z.literal("")),
   artworkTitle: z.string().trim().min(1).max(240),
   category: z.enum(["music", "art", "writing", "performance", "photography"]),
@@ -57,9 +69,55 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  try {
+    await enforceRateLimit({
+      action: "submission-ip",
+      identifier: getClientIp(request),
+      limit: 8,
+      windowSeconds: 60 * 60,
+    });
+    await enforceRateLimit({
+      action: "submission-email",
+      identifier: parsed.data.submitterEmail,
+      limit: 3,
+      windowSeconds: 60 * 60,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitError) return rateLimitResponse(error);
+    throw error;
+  }
+
   if (!(await verifyTurnstileToken(parsed.data.turnstileToken, request))) {
     return NextResponse.json(
       { error: "Please verify that you are human." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const uploadSessionId = parsed.data.uploadSessionId || "";
+    const hasImages = Boolean(
+      parsed.data.artistPhotoCloudinaryId || parsed.data.heroImageCloudinaryId
+    );
+    if (hasImages && !isValidUploadSessionId(uploadSessionId)) {
+      throw new Error("Invalid upload session.");
+    }
+    if (hasImages) {
+      const folder = submissionUploadFolder(uploadSessionId);
+      assertCloudinaryIdInFolder(
+        parsed.data.artistPhotoCloudinaryId || null,
+        folder,
+        "Invalid artist photo upload."
+      );
+      assertCloudinaryIdInFolder(
+        parsed.data.heroImageCloudinaryId || null,
+        folder,
+        "Invalid project image upload."
+      );
+    }
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Invalid upload." },
       { status: 400 }
     );
   }
@@ -95,6 +153,7 @@ export async function POST(request: NextRequest) {
 
   const verifyUrl = new URL("/auth/verify", request.nextUrl.origin);
   verifyUrl.searchParams.set("token", rawToken);
+  verifyUrl.searchParams.set("purpose", "submission_verification");
 
   await sendEmail({
     to: parsed.data.submitterEmail,

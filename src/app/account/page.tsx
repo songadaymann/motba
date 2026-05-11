@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentSession } from "@/lib/auth";
+import { listManagedArtistProfilesForUser } from "@/lib/d1";
 import { listPasskeysForUser } from "@/lib/passkeys";
 import { listSubmissionsForUser } from "@/lib/submissions";
 import { PROJECT_FREQUENCY_LABELS } from "@/lib/constants";
+import { ManagedArtistProfiles } from "./managed-artist-profiles";
 import { PasskeyPanel } from "./passkey-panel";
 
 export const dynamic = "force-dynamic";
@@ -17,9 +19,10 @@ export default async function AccountPage() {
   const session = await getCurrentSession();
   if (!session) redirect("/sign-in?next=/account");
 
-  const [passkeys, submissions] = await Promise.all([
+  const [passkeys, submissions, managedArtists] = await Promise.all([
     listPasskeysForUser(session.user.id),
     listSubmissionsForUser(session.user.id),
+    listManagedArtistProfilesForUser(session.user.id),
   ]);
 
   return (
@@ -28,6 +31,11 @@ export default async function AccountPage() {
       <p className="mt-2 text-muted-foreground">{session.user.email}</p>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_1fr]">
+        <section className="grid content-start gap-4 lg:col-span-2">
+          <h2 className="text-xl font-bold">Artist profiles</h2>
+          <ManagedArtistProfiles initialProfiles={managedArtists} />
+        </section>
+
         <section className="grid gap-4">
           <h2 className="text-xl font-bold">Passkeys</h2>
           <PasskeyPanel initialPasskeys={passkeys} />

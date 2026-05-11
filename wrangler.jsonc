@@ -39,7 +39,7 @@
     "ALLOW_LOCAL_ADMIN": "false",
     "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "daasdsuhz",
     "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-f6ad53a541b04e8aa66fe5e0dad12eb8.r2.dev",
-    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "",
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAADMrUJn924S3B-0C",
     "NEXTJS_ENV": "production",
     "RESEND_FROM_EMAIL": "MOTBA <noreply@motba.art>"
   },
@@ -74,7 +74,7 @@
         "ALLOW_LOCAL_ADMIN": "false",
         "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "daasdsuhz",
         "NEXT_PUBLIC_R2_PUBLIC_URL": "https://pub-f6ad53a541b04e8aa66fe5e0dad12eb8.r2.dev",
-        "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "",
+        "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAADMrUJn924S3B-0C",
         "NEXTJS_ENV": "production",
         "RESEND_FROM_EMAIL": "MOTBA <noreply@motba.art>"
       }

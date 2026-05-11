@@ -17,6 +17,7 @@ import {
   getArtworkDurationText,
   getArtworkYearsDisplay,
 } from "@/lib/artwork-time";
+import type { DeepZoomGallery } from "@/types/database";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +103,7 @@ interface ArtworkWithArtist {
     embed_id: string | null;
     sort_order: number;
   }[];
+  deep_zoom_galleries: DeepZoomGallery[];
 }
 
 export async function generateMetadata({
@@ -140,6 +142,10 @@ export default async function ArtworkPage({
   const links = [...(typedArtwork.artwork_links || [])].sort(
     (a, b) => a.sort_order - b.sort_order
   );
+  const deepZoomGalleries = [...(typedArtwork.deep_zoom_galleries || [])].sort(
+    (a, b) => a.sort_order - b.sort_order
+  );
+  const showStandardGallery = deepZoomGalleries.length === 0;
   const categoryColor = CATEGORY_COLORS[typedArtwork.category];
   const yearsDisplay = getArtworkYearsDisplay(typedArtwork);
   const duration = getArtworkDurationText(typedArtwork);
@@ -148,6 +154,10 @@ export default async function ArtworkPage({
   const embeddable = typedArtwork.external_url
     ? await canEmbed(typedArtwork.external_url)
     : false;
+  const DeepZoomGallerySection =
+    deepZoomGalleries.length > 0
+      ? (await import("@/components/DeepZoomGallerySection")).DeepZoomGallerySection
+      : null;
 
   return (
     <div className="py-12">
@@ -316,8 +326,14 @@ export default async function ArtworkPage({
         </div>
       )}
 
+      {DeepZoomGallerySection && (
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <DeepZoomGallerySection galleries={deepZoomGalleries} />
+        </div>
+      )}
+
       {/* Gallery / Image wall — full-width, edge-to-edge */}
-      {images.length > 20 ? (
+      {showStandardGallery && images.length > 20 ? (
         <div className="mb-8 w-full">
           <ImageWall
             images={images}
@@ -325,7 +341,7 @@ export default async function ArtworkPage({
             fallbackAlt={typedArtwork.title}
           />
         </div>
-      ) : images.length > 0 ? (
+      ) : showStandardGallery && images.length > 0 ? (
         <div className="mb-8 w-full px-4 sm:px-6">
           <div className="mx-auto max-w-4xl">
             <h2 className="mb-4 text-xl font-semibold">Gallery</h2>

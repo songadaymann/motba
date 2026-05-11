@@ -203,7 +203,7 @@ export async function createPasskeyRegistrationOptions(
     })),
     authenticatorSelection: {
       residentKey: "preferred",
-      userVerification: "preferred",
+      userVerification: "required",
     },
   });
 
@@ -239,6 +239,7 @@ export async function verifyPasskeyRegistration(input: {
     expectedChallenge: challenge.challenge,
     expectedOrigin: challenge.origin,
     expectedRPID: challenge.rp_id,
+    requireUserVerification: true,
   });
 
   if (!verification.verified) {
@@ -283,7 +284,7 @@ export async function createPasskeyAuthenticationOptions(request: Request) {
   const options = await generateAuthenticationOptions({
     rpID: rp.rpID,
     allowCredentials: [],
-    userVerification: "preferred",
+    userVerification: "required",
   });
 
   await saveChallenge({
@@ -324,6 +325,7 @@ export async function verifyPasskeyAuthentication(input: {
     expectedOrigin: challenge.origin,
     expectedRPID: challenge.rp_id,
     credential: toCredential(passkey),
+    requireUserVerification: true,
   });
 
   if (!verification.verified) {

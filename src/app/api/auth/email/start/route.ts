@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { buildEmailLayout, sendEmail } from "@/lib/email";
 import { createEmailToken, safeNextPath } from "@/lib/auth";
+import {
+  enforceRateLimit,
+  getClientIp,
+  rateLimitResponse,
+  RateLimitError,
+} from "@/lib/rate-limit";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const schema = z.object({
@@ -26,6 +32,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   }
 
+  try {
+    await enforceRateLimit({
+      action: "auth-email-ip",
+      identifier: getClientIp(request),
+      limit: 10,
+      windowSeconds: 60 * 60,
+    });
+    await enforceRateLimit({
+      action: "auth-email-address",
+      identifier: parsed.data.email,
+      limit: 4,
+      windowSeconds: 15 * 60,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitError) return rateLimitResponse(error);
+    throw error;
+  }
+
   if (!(await verifyTurnstileToken(parsed.data.turnstileToken, request))) {
     return NextResponse.json(
       { error: "Please verify that you are human." },
@@ -43,6 +67,7 @@ export async function POST(request: NextRequest) {
 
   const verifyUrl = new URL("/auth/verify", request.nextUrl.origin);
   verifyUrl.searchParams.set("token", rawToken);
+  verifyUrl.searchParams.set("purpose", "login");
 
   await sendEmail({
     to: parsed.data.email,
