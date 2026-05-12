@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clock3, X } from "lucide-react";
+import { Clock3, UserRound, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClockO } from "@/components/ClockO";
 import { useState } from "react";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
   { href: "/timeline", label: "Timeline" },
   { href: "/artists", label: "Artists" },
+  { href: "/guestbook", label: "Guestbook" },
   { href: "/start", label: "Start" },
   { href: "/submit", label: "Submit" },
-  { href: "/account", label: "Account" },
+  { href: "/account", label: "Account", icon: UserRound },
 ];
 
 export function Header() {
@@ -39,22 +39,26 @@ export function Header() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-3 md:flex">
+        <nav className="hidden items-center gap-2 lg:gap-3 md:flex">
           {NAV_LINKS.map((link) => {
             const isActive = pathname === link.href;
+            const Icon = link.icon;
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-label={Icon ? link.label : undefined}
+                title={Icon ? link.label : undefined}
                 className={cn(
-                  "time-nav-link text-xs font-black uppercase tracking-[0.1em] transition-colors",
+                  "time-nav-link text-[10px] font-black uppercase tracking-[0.1em] transition-colors lg:text-xs",
+                  Icon && "inline-flex size-8 items-center justify-center",
                   isActive
                     ? "text-[var(--riso-ink)] underline decoration-[3px] underline-offset-4"
                     : "text-[var(--riso-ink)]/70 hover:text-[var(--riso-ink)]"
                 )}
                 style={{ fontFamily: "'Arial Black', 'Impact', sans-serif" }}
               >
-                {link.label}
+                {Icon ? <Icon className="size-4" strokeWidth={2.5} /> : link.label}
               </Link>
             );
           })}

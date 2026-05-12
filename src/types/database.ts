@@ -62,6 +62,18 @@ export interface UserProjectEntry {
   created_at: string;
 }
 
+export interface GuestbookEntry {
+  id: string;
+  name: string;
+  message: string;
+  homepage_url: string | null;
+  is_visible: boolean;
+  ip_hash: string | null;
+  user_agent: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Artist {
   id: string;
   name: string;
