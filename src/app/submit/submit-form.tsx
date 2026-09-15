@@ -51,6 +51,7 @@ export function SubmitForm({
   const [projectImage, setProjectImage] = useState<UploadedImage | null>(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
+  const [isOngoing, setIsOngoing] = useState(false);
 
   function handleUpload(kind: UploadKind, result: UploadResult) {
     const info =
@@ -97,10 +98,9 @@ export function SubmitForm({
       artworkTitle: form.get("artworkTitle"),
       category: form.get("category"),
       projectFrequency: form.get("projectFrequency"),
-      yearsDisplay: form.get("yearsDisplay"),
-      startYear: form.get("startYear"),
-      endYear: form.get("endYear"),
-      isOngoing: form.get("isOngoing") === "on",
+      startDate: form.get("startDate"),
+      endDate: isOngoing ? "" : form.get("endDate"),
+      isOngoing,
       description: form.get("description"),
       externalUrl: form.get("externalUrl"),
       heroImageCloudinaryId: projectImage?.publicId || "",
@@ -238,22 +238,30 @@ export function SubmitForm({
             </select>
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-[1fr_120px_120px]">
+        <div
+          className={
+            isOngoing ? "grid gap-4 sm:max-w-xs" : "grid gap-4 sm:grid-cols-2"
+          }
+        >
           <div className="grid gap-2">
-            <Label htmlFor="yearsDisplay">Years</Label>
-            <Input id="yearsDisplay" name="yearsDisplay" placeholder="2009-present" />
+            <Label htmlFor="startDate">Start date</Label>
+            <Input id="startDate" name="startDate" type="date" required />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="startYear">Start</Label>
-            <Input id="startYear" name="startYear" type="number" inputMode="numeric" />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="endYear">End</Label>
-            <Input id="endYear" name="endYear" type="number" inputMode="numeric" />
-          </div>
+          {!isOngoing && (
+            <div className="grid gap-2">
+              <Label htmlFor="endDate">End date</Label>
+              <Input id="endDate" name="endDate" type="date" required />
+            </div>
+          )}
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <input name="isOngoing" type="checkbox" className="size-4" />
+          <input
+            name="isOngoing"
+            type="checkbox"
+            className="size-4"
+            checked={isOngoing}
+            onChange={(event) => setIsOngoing(event.target.checked)}
+          />
           Ongoing
         </label>
         <div className="grid gap-2">

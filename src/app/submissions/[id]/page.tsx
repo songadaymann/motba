@@ -8,6 +8,7 @@ import {
   getSubmissionByPrivateToken,
   getSubmissionForUser,
 } from "@/lib/submissions";
+import { getArtworkDurationText } from "@/lib/artwork-time";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ export default async function SubmissionStatusPage({
       : null;
 
   if (!submission) notFound();
+
+  const duration = getArtworkDurationText(submission);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
@@ -79,6 +82,7 @@ export default async function SubmissionStatusPage({
           {submission.years_display && (
             <p className="mt-3 text-muted-foreground">{submission.years_display}</p>
           )}
+          {duration && <p className="mt-3 font-medium">{duration}</p>}
           {submission.description && <p className="mt-4">{submission.description}</p>}
           {submission.external_url && (
             <Link

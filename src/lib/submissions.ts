@@ -33,7 +33,11 @@ export type PublicSubmissionInput = {
   projectFrequency?: ProjectFrequency;
   yearsDisplay?: string | null;
   startYear?: number | null;
+  startMonth?: number | null;
+  startDay?: number | null;
   endYear?: number | null;
+  endMonth?: number | null;
+  endDay?: number | null;
   isOngoing?: boolean;
   description?: string | null;
   externalUrl?: string | null;
@@ -69,7 +73,11 @@ export async function createPublicSubmission(input: PublicSubmissionInput) {
        project_frequency,
        years_display,
        start_year,
+       start_month,
+       start_day,
        end_year,
+       end_month,
+       end_day,
        is_ongoing,
        description,
        external_url,
@@ -79,7 +87,7 @@ export async function createPublicSubmission(input: PublicSubmissionInput) {
        private_token_hash,
        created_at,
        updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.submitterName.trim(),
@@ -93,7 +101,11 @@ export async function createPublicSubmission(input: PublicSubmissionInput) {
       input.projectFrequency === "yearly" ? "yearly" : "daily",
       input.yearsDisplay?.trim() || null,
       input.startYear ?? null,
+      input.startMonth ?? null,
+      input.startDay ?? null,
       input.endYear ?? null,
+      input.endMonth ?? null,
+      input.endDay ?? null,
       toSqlBoolean(Boolean(input.isOngoing)),
       input.description?.trim() || null,
       input.externalUrl?.trim() || null,

@@ -161,7 +161,11 @@ export interface Submission {
   project_frequency: ProjectFrequency;
   years_display: string | null;
   start_year: number | null;
+  start_month: number | null;
+  start_day: number | null;
   end_year: number | null;
+  end_month: number | null;
+  end_day: number | null;
   is_ongoing: boolean;
   description: string | null;
   external_url: string | null;

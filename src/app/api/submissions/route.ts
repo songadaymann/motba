@@ -19,7 +19,7 @@ import {
   markSubmissionVerificationSent,
 } from "@/lib/submissions";
 
-const currentYear = new Date().getFullYear();
+const dateSchema = z.string().max(10);
 
 const schema = z.object({
   submitterName: z.string().trim().min(1).max(160),
@@ -32,16 +32,62 @@ const schema = z.object({
   artworkTitle: z.string().trim().min(1).max(240),
   category: z.enum(["music", "art", "writing", "performance", "photography"]),
   projectFrequency: z.enum(["daily", "yearly"]).optional(),
-  yearsDisplay: z.string().trim().max(120).optional(),
-  startYear: z.coerce.number().int().min(1).max(currentYear + 100).optional().or(z.literal("")),
-  endYear: z.coerce.number().int().min(1).max(currentYear + 100).optional().or(z.literal("")),
+  startDate: dateSchema,
+  endDate: dateSchema.optional().or(z.literal("")),
   isOngoing: z.boolean().optional(),
   description: z.string().trim().max(4000).optional(),
   externalUrl: z.string().trim().url().max(500).optional().or(z.literal("")),
   heroImageCloudinaryId: z.string().trim().max(300).optional().or(z.literal("")),
   website: z.string().optional(),
   turnstileToken: z.string().max(2048).optional(),
+}).superRefine((value, context) => {
+  const start = parseDate(value.startDate);
+  const end = value.endDate ? parseDate(value.endDate) : null;
+
+  if (!start) {
+    context.addIssue({
+      code: "custom",
+      path: ["startDate"],
+      message: "Enter a valid start date.",
+    });
+  }
+  if (value.endDate && !end) {
+    context.addIssue({
+      code: "custom",
+      path: ["endDate"],
+      message: "Enter a valid end date.",
+    });
+  }
+  if (!value.isOngoing && !value.endDate) {
+    context.addIssue({
+      code: "custom",
+      path: ["endDate"],
+      message: "Enter an end date or mark the project ongoing.",
+    });
+  }
+  if (start && end && end.valueOf() < start.valueOf()) {
+    context.addIssue({
+      code: "custom",
+      path: ["endDate"],
+      message: "End date must be on or after the start date.",
+    });
+  }
 });
+
+function parseDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+    ? date
+    : null;
+}
+
+function dateParts(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return { year, month, day };
+}
 
 function escapeHtml(value: string) {
   return value
@@ -52,15 +98,12 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#039;");
 }
 
-function numberOrNull(value: number | "") {
-  return typeof value === "number" ? value : null;
-}
-
 export async function POST(request: NextRequest) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
+    const message = parsed.error.issues.find((issue) => issue.message)?.message;
     return NextResponse.json(
-      { error: "Please check the required fields and URLs." },
+      { error: message || "Please check the required fields and URLs." },
       { status: 400 }
     );
   }
@@ -122,6 +165,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const start = dateParts(parsed.data.startDate);
+  const end = parsed.data.isOngoing || !parsed.data.endDate
+    ? null
+    : dateParts(parsed.data.endDate);
+  const yearsDisplay = parsed.data.isOngoing
+    ? `${start.year} - now`
+    : start.year === end?.year
+      ? String(start.year)
+      : `${start.year} - ${end?.year}`;
+
   const { submission, privateToken } = await createPublicSubmission({
     submitterName: parsed.data.submitterName,
     submitterEmail: parsed.data.submitterEmail,
@@ -132,9 +185,13 @@ export async function POST(request: NextRequest) {
     artworkTitle: parsed.data.artworkTitle,
     category: parsed.data.category,
     projectFrequency: parsed.data.projectFrequency ?? "daily",
-    yearsDisplay: parsed.data.yearsDisplay,
-    startYear: numberOrNull(parsed.data.startYear ?? ""),
-    endYear: numberOrNull(parsed.data.endYear ?? ""),
+    yearsDisplay,
+    startYear: start.year,
+    startMonth: start.month,
+    startDay: start.day,
+    endYear: end?.year ?? null,
+    endMonth: end?.month ?? null,
+    endDay: end?.day ?? null,
     isOngoing: parsed.data.isOngoing,
     description: parsed.data.description,
     externalUrl: parsed.data.externalUrl || null,

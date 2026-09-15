@@ -93,7 +93,7 @@ export function getArtworkCountMetric(
   if (durationMs == null) return null;
 
   return {
-    value: Math.floor(durationMs / DAY_MS).toLocaleString(),
+    value: (Math.floor(durationMs / DAY_MS) + 1).toLocaleString(),
     label: "DAYS",
     isOngoing: ongoing,
   };
@@ -223,7 +223,8 @@ export function getArtworkDurationText(
   const durationMs = getDurationMs(artwork, now);
   if (durationMs == null) return null;
 
-  const days = Math.floor(durationMs / DAY_MS);
+  // Daily practices count both the first and last calendar day.
+  const days = Math.floor(durationMs / DAY_MS) + 1;
   const years =
     artwork.end_year &&
     artwork.start_month === 1 &&
